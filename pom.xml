@@ -11,7 +11,8 @@
 	<groupId>com.samuel.sniffers</groupId>
 	<artifactId>pet-clinic</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>pet-clinic</name>
+    <packaging>pom</packaging>
+    <name>pet-clinic</name>
 	<description>The Pet Shop Project</description>
 	<url/>
 	<licenses>
@@ -20,7 +21,12 @@
 	<developers>
 		<developer/>
 	</developers>
-	<scm>
+    <modules>
+        <module>pet-clinic-utils</module>
+		<module>pet-clinic-dao</module>
+		<module>pet-clinic-api</module>
+	</modules>
+    <scm>
 		<connection/>
 		<developerConnection/>
 		<tag/>
