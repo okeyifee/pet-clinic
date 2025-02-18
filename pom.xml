@@ -15,15 +15,18 @@
     <name>pet-clinic</name>
 	<description>The Pet Shop Project</description>
 
-    <modules>
-        <module>pet-clinic-utils</module>
+	<properties>
+		<java.version>17</java.version>
+		<maven.compiler.source>${java.version}</maven.compiler.source>
+		<maven.compiler.target>${java.version}</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<modules>
+		<module>pet-clinic-utils</module>
 		<module>pet-clinic-dao</module>
 		<module>pet-clinic-api</module>
 	</modules>
-
-	<properties>
-		<java.version>17</java.version>
-	</properties>
 
 	<dependencies>
 		<dependency>

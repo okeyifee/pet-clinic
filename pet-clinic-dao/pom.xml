@@ -14,10 +14,6 @@
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
         <version.mariadb.java.client>3.5.2</version.mariadb.java.client>
         <version.mariadb.java.client>3.5.2</version.mariadb.java.client>
         <version.flywheel>11.3.2</version.flywheel>
@@ -54,5 +50,17 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>**/*.sql</include>
+                    <include>**/*.properties</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
 
 </project>
