@@ -10,11 +10,34 @@
     </parent>
 
     <artifactId>pet-clinic-api</artifactId>
+    <version>1.0.0</version> <!-- Specific version of api -->
+    <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <version.pet.clinic.utils>0.0.1-SNAPSHOT</version.pet.clinic.utils>
+        <version.pet.clinic.dao>0.0.1-SNAPSHOT</version.pet.clinic.dao>
     </properties>
+
+    <dependencies>
+
+        <!-- utils -->
+        <dependency>
+            <groupId>com.samuel.sniffers</groupId>
+            <artifactId>pet-clinic-utils</artifactId>
+            <version>${version.pet.clinic.utils}</version>
+        </dependency>
+
+        <!-- dao -->
+        <dependency>
+            <groupId>com.samuel.sniffers</groupId>
+            <artifactId>pet-clinic-dao</artifactId>
+            <version>${version.pet.clinic.dao}</version>
+        </dependency>
+
+    </dependencies>
 
 </project>
