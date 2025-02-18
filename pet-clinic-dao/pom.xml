@@ -10,6 +10,8 @@
     </parent>
 
     <artifactId>pet-clinic-dao</artifactId>
+    <version>1.0.0</version> <!-- Specific version of dao -->
+    <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -17,14 +19,40 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <version.mariadb.java.client>3.5.2</version.mariadb.java.client>
+        <version.mariadb.java.client>3.5.2</version.mariadb.java.client>
+        <version.flywheel>11.3.2</version.flywheel>
     </properties>
 
     <dependencies>
+
+        <!-- utils -->
+        <dependency>
+            <groupId>com.samuel.sniffers</groupId>
+            <artifactId>pet-clinic-utils</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- MariaDB Driver -->
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
             <version>${version.mariadb.java.client}</version>
         </dependency>
+
+        <!-- Flyway -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+            <version>${version.flywheel}</version>
+        </dependency>
+
+        <!-- Flyway MariaDB support -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+            <version>${version.flywheel}</version>
+        </dependency>
+
     </dependencies>
 
 </project>
