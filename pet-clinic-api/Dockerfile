@@ -1,12 +1,13 @@
-FROM eclipse-temurin:17-jre-jammy
+# Specify platform explicitly
+FROM --platform=linux/amd64 eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
 # Add a volume pointing to /tmp
 VOLUME /tmp
 
-# Copy the JAR file
-COPY target/pet-clinic-api-1.0.0.jar app.jar
+# Copy the fat JAR file
+COPY target/pet-clinic-api-1.0.0-fat.jar app.jar
 
 # Set environment variables
 ENV JAVA_OPTS="-Xmx512m -Xms256m"
