@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property name="APP_NAME" value="pet-clinic-api"/>
+    <include resource="logback/base.xml"/>
+
+    <logger name="com.samuel.sniffers.pet_clinic.api" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC"/>
+    </logger>
+
+    <!-- Include other module loggers -->
+    <logger name="com.samuel.sniffers.pet_clinic.dao" level="DEBUG"/>
+    <logger name="com.samuel.sniffers.pet_clinic.utils" level="DEBUG"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC"/>
+    </root>
+</configuration>

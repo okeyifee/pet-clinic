@@ -15,6 +15,31 @@
     <packaging>jar</packaging>
 
     <properties>
+        <version.jackson.databind>2.18.2</version.jackson.databind>
+        <version.slf4j.api>2.0.16</version.slf4j.api>
+        <version.logback.classic>1.5.16</version.logback.classic>
     </properties>
+
+    <dependencies>
+        <!-- Jackson for JSON processing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${version.jackson.databind}</version>
+        </dependency>
+
+        <!-- Logging dependencies -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${version.slf4j.api}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${version.logback.classic}</version>
+        </dependency>
+
+    </dependencies>
 
 </project>
