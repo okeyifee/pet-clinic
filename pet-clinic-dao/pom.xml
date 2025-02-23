@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>pet-clinic-dao</artifactId>
-    <version>1.0.0</version> <!-- Specific version of dao -->
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <properties>
