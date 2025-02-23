@@ -6,7 +6,7 @@ import com.samuel.sniffers.internal.Slf4jLogger;
 public class LoggerFactory {
 
     private LoggerFactory() {
-        // Private constructor to prevent instantiation
+        // Prevent instantiation of LoggerFactory
         throw new UnsupportedOperationException("This is an utility class and cannot be instantiated");
     }
 

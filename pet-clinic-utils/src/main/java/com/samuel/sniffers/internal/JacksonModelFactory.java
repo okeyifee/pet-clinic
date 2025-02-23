@@ -2,26 +2,28 @@ package com.samuel.sniffers.internal;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.samuel.sniffers.api.exception.ConversionException;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.samuel.sniffers.api.exception.EntityMappingException;
 import com.samuel.sniffers.api.factory.LoggerFactory;
-import com.samuel.sniffers.api.factory.ModelFactory;
+import com.samuel.sniffers.api.factory.EntityFactory;
 import com.samuel.sniffers.api.logging.Logger;
 import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
-public class JacksonModelFactory implements ModelFactory {
+public class JacksonModelFactory implements EntityFactory {
     private final ObjectMapper objectMapper;
     private final Logger logger = LoggerFactory.getLogger(JacksonModelFactory.class);
 
 
     public JacksonModelFactory() {
         this.objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule()); // Register JavaTimeModule for Java 8 date/time types
         this.objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
@@ -34,7 +36,7 @@ public class JacksonModelFactory implements ModelFactory {
             return objectMapper.convertValue(entity, pojoClass);
         } catch (Exception e) {
             logger.error("Error converting entity to POJO: {}", e.getMessage(), e);
-            throw new ConversionException("Failed to convert entity to POJO", e);
+            throw new EntityMappingException("Failed to convert entity to POJO", e);
         }
     }
 
@@ -47,15 +49,32 @@ public class JacksonModelFactory implements ModelFactory {
             return objectMapper.convertValue(pojo, entityClass);
         } catch (Exception e) {
             logger.error("Error converting POJO to entity: {}", e.getMessage(), e);
-            throw new ConversionException("Failed to convert POJO to entity", e);
+            throw new EntityMappingException("Failed to convert POJO to entity", e);
+        }
+    }
+
+    public <D, P> D patchEntity(P pojo, D entity) {
+        try {
+            if (pojo == null || entity == null) {
+                return null;
+            }
+            // Merge only non-null fields into existing model
+            objectMapper.updateValue(entity, objectMapper.convertValue(pojo, Map.class));
+            return entity;
+        } catch (Exception e) {
+            final String entityName = entity.getClass().getName();
+            logger.error("Error patching {} entity: {}", entityName, e.getMessage(), e);
+            throw new EntityMappingException(String.format("Failed to patch %s entity", entityName), e);
         }
     }
 
     @Override
     public <D, P> List<P> convertToDTOList(List<D> entities, Class<P> pojoClass) {
+
         if (entities == null) {
-            return null;
+            return Collections.emptyList();
         }
+
         return entities.stream()
                 .map(entity -> convertToDTO(entity, pojoClass))
                 .toList();
@@ -63,9 +82,11 @@ public class JacksonModelFactory implements ModelFactory {
 
     @Override
     public <D, P> List<D> convertToEntityList(List<P> pojos, Class<D> entityClass) {
+
         if (pojos == null) {
-            return null;
+            return Collections.emptyList();
         }
+
         return pojos.stream()
                 .map(pojo -> convertToEntity(pojo, entityClass))
                 .toList();
@@ -79,7 +100,8 @@ public class JacksonModelFactory implements ModelFactory {
             }
             return objectMapper.readValue(json, objectMapper.getTypeFactory().constructCollectionType(List.class, targetClass));
         } catch (Exception e) {
-            throw new ConversionException("Failed to convert JSON string to List", e);
+            logger.error("Failed to convert JSON string to List.", e);
+            throw new EntityMappingException("Failed to convert JSON string to List.", e);
         }
     }
 
@@ -91,7 +113,8 @@ public class JacksonModelFactory implements ModelFactory {
             }
             return objectMapper.readValue(json, targetType);
         } catch (Exception e) {
-            throw new ConversionException("Failed to convert JSON string to " + targetType.getSimpleName(), e);
+            logger.error("Failed to convert JSON string to: {}", targetType.getSimpleName(), e);
+            throw new EntityMappingException("Failed to convert JSON string to " + targetType.getSimpleName(), e);
         }
     }
 
@@ -104,7 +127,7 @@ public class JacksonModelFactory implements ModelFactory {
             return objectMapper.writeValueAsString(object);
         } catch (Exception e) {
             logger.error("Error converting object to JSON string: {}", e.getMessage(), e);
-            throw new ConversionException("Failed to convert object to JSON string", e);
+            throw new EntityMappingException("Failed to convert object to JSON string", e);
         }
     }
 
@@ -116,7 +139,8 @@ public class JacksonModelFactory implements ModelFactory {
             }
             return objectMapper.writeValueAsString(entityList);
         } catch (Exception e) {
-            throw new ConversionException("Failed to convert entity list to JSON string", e);
+            logger.error("Failed to convert entity list to JSON string: {}", e.getMessage(), e);
+            throw new EntityMappingException("Failed to convert entity list to JSON string", e);
         }
     }
 }

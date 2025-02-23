@@ -1,8 +1,8 @@
 package com.samuel.sniffers.internal;
 
+import com.samuel.sniffers.api.exception.EntityMappingException;
 import org.junit.jupiter.api.BeforeEach;
 
-import com.samuel.sniffers.api.exception.ConversionException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-class JacksonModelFactoryTest {
+class JacksonEntityFactoryTest {
 
     private JacksonModelFactory modelFactory;
 
@@ -52,6 +52,19 @@ class JacksonModelFactoryTest {
         assertThat(entity.getName()).isEqualTo(expectedName);
         assertThat(entity.getValue()).isEqualTo(expectedValue);
     }
+
+    @ParameterizedTest
+    @MethodSource("patchEntityDataProvider")
+    void shouldPatchEntity(TestDTO patchDTO, TestEntity originalEntity, TestEntity expectedEntity) {
+        // Perform patch
+        TestEntity patchedEntity = modelFactory.patchEntity(patchDTO, originalEntity);
+
+        // Assertions to ensure the entity is patched as expected
+        assertThat(patchedEntity).isNotNull();
+        assertThat(patchedEntity.getName()).isEqualTo(expectedEntity.getName());
+        assertThat(patchedEntity.getValue()).isEqualTo(expectedEntity.getValue());
+    }
+
 
     @ParameterizedTest
     @MethodSource("entityToDtoListDataProvider")
@@ -128,14 +141,14 @@ class JacksonModelFactoryTest {
     @NullSource
     void shouldHandleNullInput(TestEntity entity) {
         assertThat(modelFactory.convertToDTO(entity, TestDTO.class)).isNull();
-        assertThat(modelFactory.convertToDTOList(null, TestDTO.class)).isNull();
+        assertThat(modelFactory.convertToDTOList(null, TestDTO.class)).isEmpty();
     }
 
     @ParameterizedTest
     @MethodSource("invalidConversionTestCases")
     void shouldThrowConversionExceptionForInvalidConversion(Object invalidEntity, String expectedErrorMessage) {
         assertThatThrownBy(() -> modelFactory.convertToDTO(invalidEntity, TestDTO.class))
-                .isInstanceOf(ConversionException.class)
+                .isInstanceOf(EntityMappingException.class)
                 .hasMessageContaining(expectedErrorMessage);
     }
 
@@ -145,6 +158,22 @@ class JacksonModelFactoryTest {
                 arguments(new TestDTO("test1", 123), "test1", 123),
                 arguments(new TestDTO("test2", 456), "test2", 456),
                 arguments(new TestDTO("", 0), "", 0)
+        );
+    }
+
+    private static Stream<Arguments> patchEntityDataProvider() {
+        return Stream.of(
+                // Case where both fields are patched
+                arguments(new TestDTO("patchedName", 999), new TestEntity("originalName", 123), new TestEntity("patchedName", 999)),
+
+                // Case where only the 'name' field is patched
+                arguments(new TestDTO("patchedName", null), new TestEntity("originalName", 123), new TestEntity("patchedName", 123)),
+
+                // Case where only the 'value' field is patched
+                arguments(new TestDTO(null, 456), new TestEntity("originalName", 123), new TestEntity("originalName", 456)),
+
+                // Case where no fields are patched (should remain the same)
+                arguments(new TestDTO(null, null), new TestEntity("originalName", 123), new TestEntity("originalName", 123))
         );
     }
 

@@ -39,7 +39,7 @@ class Slf4jLoggerTest {
 
     @Test
     void shouldLogError() {
-        String message = "Error message";
+        final String message = "Error message";
         slf4jLogger.error(message);
 
         assertThat(listAppender.list)
@@ -53,7 +53,7 @@ class Slf4jLoggerTest {
 
     @Test
     void shouldLogErrorWithException() {
-        String message = "Error with exception";
+        final String message = "Error with exception";
         Exception exception = new RuntimeException("Test exception");
 
         slf4jLogger.error(message, exception);
@@ -71,7 +71,7 @@ class Slf4jLoggerTest {
 
     @Test
     void shouldLogInfo() {
-        String message = "Info message";
+        final String message = "Info message";
         slf4jLogger.info(message);
 
         assertThat(listAppender.list)
@@ -85,7 +85,7 @@ class Slf4jLoggerTest {
 
     @Test
     void shouldLogDebug() {
-        String message = "Debug message";
+        final String message = "Debug message";
         slf4jLogger.debug(message);
 
         assertThat(listAppender.list)
