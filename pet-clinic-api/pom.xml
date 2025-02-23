@@ -10,12 +10,14 @@
     </parent>
 
     <artifactId>pet-clinic-api</artifactId>
-    <version>1.0.0</version> <!-- Specific version of api -->
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <properties>
-        <version.pet.clinic.utils>0.0.1-SNAPSHOT</version.pet.clinic.utils>
-        <version.pet.clinic.dao>0.0.1-SNAPSHOT</version.pet.clinic.dao>
+        <version.pet.clinic.utils>1.0.0</version.pet.clinic.utils>
+        <version.pet.clinic.dao>1.0.0</version.pet.clinic.dao>
+
+        <version.springdoc.webmvc.ui>2.8.5</version.springdoc.webmvc.ui>
     </properties>
 
     <dependencies>
@@ -25,6 +27,7 @@
             <groupId>com.samuel.sniffers</groupId>
             <artifactId>pet-clinic-utils</artifactId>
             <version>${version.pet.clinic.utils}</version>
+            <scope>compile</scope>
         </dependency>
 
         <!-- dao -->
@@ -32,12 +35,14 @@
             <groupId>com.samuel.sniffers</groupId>
             <artifactId>pet-clinic-dao</artifactId>
             <version>${version.pet.clinic.dao}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.samuel.sniffers</groupId>
-            <artifactId>pet-clinic-utils</artifactId>
-            <version>1.0.0</version>
             <scope>compile</scope>
+        </dependency>
+
+        <!-- Swagger/OpenAPI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${version.springdoc.webmvc.ui}</version>
         </dependency>
 
     </dependencies>
