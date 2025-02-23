@@ -82,8 +82,8 @@ pet-clinic-dao/src/main/resources/db/migration/
 Key application properties (in pet-clinic-api/src/main/resources/application.properties):
 ```properties
 spring.datasource.url=jdbc:mariadb://localhost:3306/petshop
-spring.datasource.username=***
-spring.datasource.password=***
+spring.datasource.username=*** // replace with your db username
+spring.datasource.password=*** // replace with your db password
 ```
 
 ## Docker Support
