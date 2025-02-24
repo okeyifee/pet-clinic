@@ -14,8 +14,8 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-           .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for APIs (optional)
-           .authorizeHttpRequests(auth -> auth.anyRequest().permitAll()); // Allow all requests (you can customize access rules)
+           .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for APIs
+           .authorizeHttpRequests(auth -> auth.anyRequest().permitAll()); // Allow all requests
 
         return http.build();
     }

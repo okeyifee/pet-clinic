@@ -1,5 +1,6 @@
 package com.samuel.sniffers.service.impl;
 
+import com.samuel.sniffers.api.exception.CustomerAlreadyExistsException;
 import com.samuel.sniffers.api.exception.InvalidRequestException;
 import com.samuel.sniffers.api.exception.ResourceNotFoundException;
 import com.samuel.sniffers.api.factory.EntityFactory;
@@ -15,42 +16,53 @@ import com.samuel.sniffers.entity.Customer;
 import com.samuel.sniffers.repository.CustomerRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional
-@RequiredArgsConstructor
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class CustomerServiceImpl implements CustomerService {
 
-    final Logger logger = LoggerFactory.getLogger(this.getClass());
-
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final CustomerRepository customerRepository;
     private final SecurityService securityService;
     private final EntityFactory entityFactory;
 
+    @Autowired
+    public CustomerServiceImpl(CustomerRepository customerRepository, SecurityService securityService, EntityFactory entityFactory) {
+        this.customerRepository = customerRepository;
+        this.securityService = securityService;
+        this.entityFactory = entityFactory;
+    }
+
     @Override
     public CustomerResponseDTO create(CustomerDTO dto) {
+        final String currentCustomerToken = securityService.getCurrentCustomerToken();
+
+        if (customerRepository.existByNameAndOwnerToken(
+                dto.getName(),
+                currentCustomerToken,
+                securityService.isAdmin(currentCustomerToken))) {
+
+            throw new CustomerAlreadyExistsException();
+        }
+
         Customer customer = entityFactory.convertToEntity(dto, Customer.class);
-        customer.setOwnerToken(securityService.getCurrentCustomerToken());
+        customer.setOwnerToken(currentCustomerToken);
         return entityFactory.convertToDTO(customerRepository.save(customer), CustomerResponseDTO.class);
     }
 
     @Override
-    public CustomerResponseDTO findById(String id) {
-        return customerRepository.findByIdWithAccess(
-                        id,
-                        securityService.getCurrentCustomerToken(),
-                        securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .map( customer -> entityFactory.convertToDTO(customer, CustomerResponseDTO.class))
-                .orElseThrow(() -> new ResourceNotFoundException(getFormattedNotFoundMessage(id)));
+    public CustomerResponseDTO findById(String customerId) {
+        return entityFactory.convertToDTO(getCustomer(customerId), CustomerResponseDTO.class);
     }
 
     @Override
@@ -63,14 +75,8 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public CustomerResponseDTO update(String id, CustomerDTO dto) {
-        Customer customer = customerRepository.findByIdWithAccess(
-                        id,
-                        securityService.getCurrentCustomerToken(),
-                        securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .orElseThrow(() -> new ResourceNotFoundException(getFormattedNotFoundMessage(id)));
-
+    public CustomerResponseDTO update(String customerId, CustomerDTO dto) {
+        Customer customer = getCustomer(customerId);
         customer.setName(dto.getName());
         customer.setTimezone(dto.getTimezone());
 
@@ -78,19 +84,13 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public CustomerResponseDTO update(String id, CustomerPatchDTO dto) {
+    public CustomerResponseDTO update(String customerId, CustomerPatchDTO dto) {
 
         if (dto.getName() == null && dto.getTimezone() == null) {
             throw new InvalidRequestException("You must provide either 'name' or 'timezone' in the PATCH request. Both fields cannot be empty.");
         }
 
-        Customer customer = customerRepository.findByIdWithAccess(
-                        id,
-                        securityService.getCurrentCustomerToken(),
-                        securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .orElseThrow(() -> new ResourceNotFoundException(getFormattedNotFoundMessage(id)));
-
+        Customer customer = getCustomer(customerId);
         customer = entityFactory.patchEntity(dto, customer);
         return entityFactory.convertToDTO(customerRepository.save(customer), CustomerResponseDTO.class);
     }
@@ -158,19 +158,31 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public void delete(String id) {
-        Customer customer = customerRepository.findByIdWithAccess(
-                        id,
-                        securityService.getCurrentCustomerToken(),
-                        securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .orElseThrow(() -> new ResourceNotFoundException(getFormattedNotFoundMessage(id)));
-
-        customerRepository.delete(customer);
+    public void delete(String customerId) {
+        customerRepository.delete(getCustomer(customerId));
+        logger.error("Customer with id: {} deleted successfully", customerId);
     }
 
-    private String getFormattedNotFoundMessage(String id) {
-        logger.error("Customer with id: {} not found", id);
-        return "Customer not found";
+    @Override
+    public Customer getCustomer(String customerId) {
+        Optional<Customer> optionalCustomer = customerRepository.findByIdWithAccess(
+                customerId,
+                securityService.getCurrentCustomerToken(),
+                securityService.isAdmin(securityService.getCurrentCustomerToken())
+        );
+
+        if (optionalCustomer.isEmpty()) {
+            logger.error("Customer with id: {} not found", customerId);
+            throw new ResourceNotFoundException("Customer not found");
+        }
+        return optionalCustomer.get();
+    }
+
+    @Override
+    public boolean customerExist(String customerId) {
+        return customerRepository.existByIdAndOwnerToken(
+                customerId,
+                securityService.getCurrentCustomerToken(),
+                securityService.isAdmin(securityService.getCurrentCustomerToken()));
     }
 }

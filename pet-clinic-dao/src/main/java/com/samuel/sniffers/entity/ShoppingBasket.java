@@ -23,7 +23,7 @@ public class ShoppingBasket extends BaseEntity {
     @Column(name = "status_date", nullable = false)
     private LocalDateTime statusDate;
 
-//    @JsonIgnore
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;

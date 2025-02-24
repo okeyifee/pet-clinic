@@ -20,14 +20,13 @@ public class SecurityService {
 
     public String getCurrentCustomerToken() {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-//        logger.info("Attributes: {}", attributes);
         if (attributes != null) {
             String header = attributes.getRequest().getHeader(SecurityConstants.HEADER_AUTH);
-//            logger.info("Header: {}", header);
             if (header != null && header.startsWith(SecurityConstants.TOKEN_PREFIX)) {
                 return header.substring(SecurityConstants.TOKEN_PREFIX.length());
             }
         }
+        logger.error("No valid token passed in request. Token is null.");
         throw new UnauthorizedException("No valid token found in request.");
     }
 

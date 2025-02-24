@@ -1,5 +1,6 @@
 package com.samuel.sniffers.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +17,7 @@ public class Item extends BaseEntity {
     @Column(name = "amount", nullable = false)
     private Integer amount;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "basket_id", nullable = false)
     private ShoppingBasket basket;

@@ -10,7 +10,6 @@ import com.samuel.sniffers.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,10 +23,13 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/v1/customer", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Customer controller", description = "APIs for managing customers")
-@RequiredArgsConstructor
 public class CustomerController {
 
     private final CustomerService customerService;
+
+    public CustomerController(CustomerService customerService) {
+        this.customerService = customerService;
+    }
 
     @Operation(summary = "Create customer", description = "Creates a customer")
     @PostMapping
@@ -35,7 +37,7 @@ public class CustomerController {
         CustomerResponseDTO created = customerService.create(customerDTO);
         return ResponseEntity
                 .created(URI.create("/api/v1/customers/" + created.getId()))
-                .body(ApiResponse.success("Customer created successfully", created));
+                .body(ApiResponse.created("Customer created successfully", created));
     }
 
     @Operation(summary = "Get customer by ID", description = "Retrieves customer details by ID")

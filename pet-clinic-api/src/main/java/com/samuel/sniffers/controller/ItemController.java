@@ -10,7 +10,6 @@ import com.samuel.sniffers.service.ItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,10 +23,13 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/v1/customer/{customerId}/basket/{basketId}/item", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Item controller", description = "APIs for managing basket items")
-@RequiredArgsConstructor
 public class ItemController {
 
     private final ItemService itemService;
+
+    public ItemController(ItemService itemService) {
+        this.itemService = itemService;
+    }
 
     @Operation(summary = "Create basket item", description = "Creates an item in a basket")
     @PostMapping
@@ -48,7 +50,7 @@ public class ItemController {
             @PathVariable String basketId,
             @PathVariable String itemId) {
         return ResponseEntity.ok(
-                ApiResponse.success("Basket retrieved successfully.",
+                ApiResponse.success("Item retrieved successfully.",
                         itemService.getItem(customerId, basketId, itemId)
                 )
         );
@@ -76,7 +78,7 @@ public class ItemController {
     }
 
     @Operation(summary = "Update item", description = "Update item in a basket")
-    @PutMapping("/{basketId}")
+    @PutMapping("/{itemId}")
     public ResponseEntity<ApiResponse<ItemResponseDTO>> updateItem(
             @PathVariable String customerId,
             @PathVariable String basketId,
