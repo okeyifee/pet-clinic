@@ -76,7 +76,7 @@ public class ItemController {
     }
 
     @Operation(summary = "Update item", description = "Update item in a basket")
-    @PutMapping("/{basketId}")
+    @PutMapping("/{itemId}")
     public ResponseEntity<ApiResponse<ItemResponseDTO>> updateItem(
             @PathVariable String customerId,
             @PathVariable String basketId,
