@@ -1,11 +1,12 @@
 # Initial Flyway migration script: V1__init_schema.sql
 CREATE TABLE customers (
     id CHAR(36) NOT NULL,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     timezone VARCHAR(50) NOT NULL,
     created DATETIME NOT NULL,
-    owner_token VARCHAR(255) NOT NULL,
-    PRIMARY KEY (id)
+    owner_token VARCHAR(100) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE (owner_token, name)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE shopping_baskets (
@@ -21,7 +22,7 @@ CREATE TABLE shopping_baskets (
 
 CREATE TABLE items (
     id CHAR(36) NOT NULL,
-    description VARCHAR(255) NOT NULL,
+    description VARCHAR(100) NOT NULL,
     amount INT NOT NULL,
     basket_id CHAR(36) NOT NULL,
     created DATETIME NOT NULL,

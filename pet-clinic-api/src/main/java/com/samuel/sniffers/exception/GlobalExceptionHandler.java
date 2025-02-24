@@ -1,13 +1,9 @@
 package com.samuel.sniffers.exception;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
-import com.samuel.sniffers.api.exception.IllegalStateTransitionException;
-import com.samuel.sniffers.api.exception.InvalidRequestException;
-import com.samuel.sniffers.api.exception.ResourceNotFoundException;
-import com.samuel.sniffers.api.exception.UnauthorizedException;
+import com.samuel.sniffers.api.exception.*;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
 import com.samuel.sniffers.api.response.ApiResponse;
@@ -20,10 +16,13 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestControllerAdvice
 @RequiredArgsConstructor
@@ -77,6 +76,13 @@ public class GlobalExceptionHandler {
         log.error("Validation failed: {}", errors);
         ApiResponse<Map<String, String>> response = ApiResponse.error(400,"Validation failed.", errors);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(CustomerAlreadyExistsException.class)
+    public Object handleCustomerAlreadyExists(CustomerAlreadyExistsException ex) {
+        ApiResponse<String> response = ApiResponse.error(409, ex.getMessage(), null);
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
 

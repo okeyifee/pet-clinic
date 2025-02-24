@@ -9,7 +9,6 @@ import com.samuel.sniffers.service.ShoppingBasketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +22,13 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "/v1/customer/{customerId}/basket", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Basket controller", description = "APIs for managing customers basket")
-@RequiredArgsConstructor
 public class ShoppingBasketController {
 
     private final ShoppingBasketService basketService;
+
+    public ShoppingBasketController(ShoppingBasketService basketService) {
+        this.basketService = basketService;
+    }
 
     @Operation(summary = "Create shopping basket", description = "Creates a new shopping basket for the customer")
     @PostMapping

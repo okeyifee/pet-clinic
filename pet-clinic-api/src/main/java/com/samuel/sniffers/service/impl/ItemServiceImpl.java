@@ -13,12 +13,13 @@ import com.samuel.sniffers.dto.response.ItemBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.ItemResponseDTO;
 import com.samuel.sniffers.entity.Customer;
 import com.samuel.sniffers.entity.Item;
-import com.samuel.sniffers.repository.CustomerRepository;
+import com.samuel.sniffers.entity.ShoppingBasket;
 import com.samuel.sniffers.repository.ItemRepository;
 import com.samuel.sniffers.security.SecurityService;
+import com.samuel.sniffers.service.CustomerService;
 import com.samuel.sniffers.service.ItemService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -27,51 +28,50 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional
-@RequiredArgsConstructor
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class ItemServiceImpl implements ItemService {
-
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private static final String ITEM_NOT_FOUND = "Item not found or access denied";
 
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final ItemRepository itemRepository;
-    private final CustomerRepository customerRepository;
+    private final CustomerService customerService;
     private final SecurityService securityService;
     private final EntityFactory entityFactory;
 
+    public ItemServiceImpl(ItemRepository itemRepository, CustomerService customerService, SecurityService securityService, EntityFactory entityFactory) {
+        this.itemRepository = itemRepository;
+        this.customerService = customerService;
+        this.securityService = securityService;
+        this.entityFactory = entityFactory;
+    }
+
     @Override
     public ItemResponseDTO createItem(String customerId, String basketId, ItemDTO dto) {
-        Customer customer = getCustomer(customerId);
+        Customer customer = customerService.getCustomer(customerId);
 
-        customer.getBaskets()
+        ShoppingBasket userBasket = customer.getBaskets()
                 .stream()
                 .filter(basket -> basket.getId().equalsIgnoreCase(basketId))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Basket not found"));
 
-        final Item item = entityFactory.convertToEntity(dto, Item.class);
+        Item item = entityFactory.convertToEntity(dto, Item.class);
+        item.setBasket(userBasket);
         return entityFactory.convertToDTO(itemRepository.save(item), ItemResponseDTO.class);
     }
 
     @Override
     public ItemResponseDTO getItem(String customerId, String basketId, String itemId) {
-        getCustomer(customerId);
+        validateCustomerExists(customerId);
 
-        return itemRepository.findByIdWithAccess(
-                itemId,
-                basketId,
-                customerId,
-                securityService.getCurrentCustomerToken(),
-                securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .map(item -> entityFactory.convertToDTO(item, ItemResponseDTO.class))
-                .orElseThrow(() -> new ResourceNotFoundException(ITEM_NOT_FOUND));
+        return entityFactory.convertToDTO(getDatabaseItem( customerId, basketId, itemId), ItemResponseDTO.class);
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<ItemResponseDTO> getAllItems(String customerId, String basketId) {
-        getCustomer(customerId);
+        validateCustomerExists(customerId);
         return itemRepository.findByCustomerWithAccess(
                 basketId,
                 customerId,
@@ -85,15 +85,8 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemResponseDTO updateItem(String customerId, String basketId, String itemId, ItemDTO dto) {
-        getCustomer(customerId);
-        Item item = itemRepository.findByIdWithAccess(
-                        itemId,
-                        basketId,
-                        customerId,
-                        securityService.getCurrentCustomerToken(),
-                        securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .orElseThrow(() -> new ResourceNotFoundException(ITEM_NOT_FOUND));
+        validateCustomerExists(customerId);
+        Item item = getDatabaseItem(customerId, basketId, itemId);
 
         item.setAmount(dto.getAmount());
         item.setDescription(dto.getDescription());
@@ -108,23 +101,15 @@ public class ItemServiceImpl implements ItemService {
             throw new InvalidRequestException("You must provide either 'description' or 'amount' in the PATCH request. Both fields cannot be empty.");
         }
 
-        getCustomer(customerId);
-        Item item = itemRepository.findByIdWithAccess(
-                        itemId,
-                        basketId,
-                        customerId,
-                        securityService.getCurrentCustomerToken(),
-                        securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .orElseThrow(() -> new ResourceNotFoundException(ITEM_NOT_FOUND));
-
+        validateCustomerExists(customerId);
+        Item item = getDatabaseItem(customerId, basketId, itemId);
         item = entityFactory.patchEntity(dto, item);
         return entityFactory.convertToDTO(itemRepository.save(item), ItemResponseDTO.class);
     }
 
     @Override
     public ItemBatchUpdateResponseDTO batchUpdateItems(String customerId, String basketId, BatchItemUpdateDTO dto) {
-        getCustomer(customerId);
+        validateCustomerExists(customerId);
 
         final List<String> itemIds = dto.getUpdates().stream()
                 .map(BatchItemUpdateDTO.ItemPatchDTO::getItemId)
@@ -171,8 +156,22 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public void deleteItem(String customerId, String basketId, String itemId) {
-        getCustomer(customerId);
-        Item item = itemRepository.findByIdWithAccess(
+        validateCustomerExists(customerId);
+        Item item = getDatabaseItem(customerId, basketId, itemId);
+
+        itemRepository.delete(item);
+        logger.info("deleted item with id {}", itemId);
+    }
+
+    private void validateCustomerExists(String customerId) {
+        if (!customerService.customerExist(customerId)) {
+            logger.error("Customer with id: {} not found", customerId);
+            throw new ResourceNotFoundException("Customer not found");
+        }
+    }
+
+    private Item getDatabaseItem(String customerId, String basketId, String itemId) {
+        return itemRepository.findByIdWithAccess(
                         itemId,
                         basketId,
                         customerId,
@@ -180,19 +179,5 @@ public class ItemServiceImpl implements ItemService {
                         securityService.isAdmin(securityService.getCurrentCustomerToken())
                 )
                 .orElseThrow(() -> new ResourceNotFoundException(ITEM_NOT_FOUND));
-
-        logger.info("deleting item {}", item);
-        itemRepository.delete(item);
-        logger.info("deleted item {}", item);
-    }
-
-    private Customer getCustomer(String customerId) {
-        return customerRepository.findByIdWithAccess(
-                customerId,
-                securityService.getCurrentCustomerToken(),
-                securityService.isAdmin(securityService.getCurrentCustomerToken())
-        ).orElseThrow(
-                () -> new ResourceNotFoundException("Customer not found")
-        );
     }
 }

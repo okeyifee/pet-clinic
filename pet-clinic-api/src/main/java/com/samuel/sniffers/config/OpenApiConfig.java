@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /*
-  This class handles setting up swagger UI properly allowing user pass tokens for request.
+  This class handles setting up swagger UI properly configuring it to accept tokens for validating requests.
 */
 @Configuration
 public class OpenApiConfig {

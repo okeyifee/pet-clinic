@@ -15,7 +15,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
-//import java.util.Collections;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -41,11 +40,9 @@ public class SecurityFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain filterChain) throws UnauthorizedException, ServletException, IOException {
 
-//        log.info("Request URI: {}", request.getRequestURI());
-//        log.info("Request Headers: {}", Collections.list(request.getHeaderNames()));
-
         try {
             if (!securityService.isValidToken()) {
+                log.error("Invalid token sent in request: {}", securityService.getCurrentCustomerToken());
                 throw new UnauthorizedException("Invalid token in request header.");
             }
 

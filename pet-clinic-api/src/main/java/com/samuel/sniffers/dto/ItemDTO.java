@@ -1,7 +1,6 @@
 package com.samuel.sniffers.dto;
 
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -13,9 +12,7 @@ import lombok.Data;
 @Data
 public class ItemDTO {
 
-    @NotNull
-    @NotBlank(message = "Description is required.")
-    @Size(min = 2, max = 255, message = "Description must be between 2 and 255 characters")
+    @Size(min = 2, max = 100, message = "Description must be between 2 and 100 characters")
     private String description;
 
     @NotNull
