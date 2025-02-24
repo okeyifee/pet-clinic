@@ -49,8 +49,36 @@ docker-compose up --build
 ```
 
 4. **Access the application**
-- The service will be available at: `http://localhost:8080`
+- The service will be available at: `http://localhost:8080/api`
+- Swagger wil be available at: `http://localhost:8080/api/swagger-ui/index.html`
 - MariaDB will be available at: `localhost:3306`
+
+## Running outside IDE
+
+1. **Build the image**
+```bash
+docker-compose build
+```
+
+2. **Run the container**
+```bash
+docker-compose up -d
+```
+
+3. **Check running containers**
+```bash
+docker ps
+```
+
+4. **Access the application**
+- The service will be available at: `http://localhost:8080/api`
+- Swagger wil be available at: `http://localhost:8080/api/swagger-ui/index.html`
+- MariaDB will be available at: `localhost:3306`
+
+5. **Access the application logs**
+```bash
+docker logs <container_id_or_name>
+```
 
 ## Module Details
 
