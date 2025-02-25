@@ -21,6 +21,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+      - "5005:5005"  # debug port mapping
     environment:
       SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/petshop
       SPRING_DATASOURCE_USERNAME: root
