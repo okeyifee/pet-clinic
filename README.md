@@ -84,7 +84,7 @@ docker logs <container_id_or_name>
 
 When the application starts on docker, the port 5005 is enabled for remote debugging. Steps to debug using IDE:
 - Start application on docker
-- Using either Intellij or eclipse, configure debugger to attach to port 5005
+- Using your favourite IDE, configure debugger to attach to port 5005. See steps for Intellij, Eclipse and VS code.
 
 Debugging using Intellij IDE:
 - Create a new run configuration of type 'Remote JVM Debug'
@@ -108,9 +108,9 @@ Debugging using Eclipse IDE:
 - Create a new "Remote Java Application" debug configuration with host "localhost" and port 5005 and debug.
 
 Changing the debug port:
-- In dockerfile (in the API module), look for JAVA_OPTS line and change address to your intended port.
+- In dockerfile (Situated in the API module), look for JAVA_OPTS line and change address to your intended port.
 - In docker compose file, look for the ports and change the debug port from 5005 to your intended port.
-- Run maven clean compile and after that, restart app on docker.
+- Run maven clean package command and after that run maven command to rebuild docker image using updated source code. Restart app on docker.
 - Then recreate a debug configuration in your favourite IDE to point to specified ports in the docker file and debug.
   
 
