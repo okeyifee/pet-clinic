@@ -80,6 +80,40 @@ docker ps
 docker logs <container_id_or_name>
 ```
 
+## Remote debugging
+
+When the application starts on docker, the port 5005 is enabled for remote debugging. Steps to debug using IDE:
+- Start application on docker
+- Using either Intellij or eclipse, configure debugger to attach to port 5005
+
+Debugging using Intellij IDE:
+- Create a new run configuration of type 'Remote JVM Debug'
+- In debugging mode dropdown, select 'Attach to remote JVM'
+- Ensure port is set to 5005 (default port for JVM debugging). click apply and debug. You can add breakpoints in source code and send request and happy debugging!!!
+
+Debugging using VS code:
+- Add below configuration to launch.json
+  ```
+  {
+    "type": "java",
+    "name": "Remote Debug",
+    "request": "attach",
+    "hostName": "localhost",
+    "port": 5005
+  }
+  ```
+- Save and debug. You can add breakpoints in source code and send request and happy debugging!!!
+
+Debugging using Eclipse IDE:
+- Create a new "Remote Java Application" debug configuration with host "localhost" and port 5005 and debug.
+
+Changing the debug port:
+- In dockerfile (in the API module), look for JAVA_OPTS line and change address to your intended port.
+- In docker compose file, look for the ports and change the debug port from 5005 to your intended port.
+- Run maven clean compile and after that, restart app on docker.
+- Then recreate a debug configuration in your favourite IDE to point to specified ports in the docker file and debug.
+  
+
 ## Module Details
 
 ### pet-clinic-api
