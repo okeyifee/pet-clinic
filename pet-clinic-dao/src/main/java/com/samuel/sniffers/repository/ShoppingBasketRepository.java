@@ -48,4 +48,18 @@ public interface ShoppingBasketRepository extends JpaRepository<ShoppingBasket, 
             @Param("token") String token,
             @Param("isAdmin") boolean isAdmin
     );
+
+//    List<ShoppingBasket> findByOwnerToken(String ownerToken);
+//
+//    List<ShoppingBasket> findByCustomerId(String customerId);
+//
+//    List<ShoppingBasket> findByStatusAndOwnerToken(String status, String ownerToken);
+//
+//    List<ShoppingBasket> findByStatusNotAndOwnerToken(String status, String ownerToken);
+//
+//    long countByOwnerToken(String ownerToken);
+//
+//    long countByStatusAndOwnerToken(String status, String ownerToken);
+//
+//    long countByStatusNotAndOwnerToken(String status, String ownerToken);
 }

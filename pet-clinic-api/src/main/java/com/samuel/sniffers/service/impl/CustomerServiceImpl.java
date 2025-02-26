@@ -13,6 +13,7 @@ import com.samuel.sniffers.dto.response.BatchUpdateFailure;
 import com.samuel.sniffers.dto.response.CustomerBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.entity.Customer;
+import com.samuel.sniffers.metrics.PetShopMetrics;
 import com.samuel.sniffers.repository.CustomerRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
@@ -28,22 +29,25 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(isolation = Isolation.READ_COMMITTED)
 public class CustomerServiceImpl implements CustomerService {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger;
     private final CustomerRepository customerRepository;
     private final SecurityService securityService;
     private final EntityFactory entityFactory;
+    private final PetShopMetrics metrics;
 
     @Autowired
-    public CustomerServiceImpl(CustomerRepository customerRepository, SecurityService securityService, EntityFactory entityFactory) {
+    public CustomerServiceImpl(CustomerRepository customerRepository, SecurityService securityService, EntityFactory entityFactory, PetShopMetrics metrics) {
         this.customerRepository = customerRepository;
         this.securityService = securityService;
         this.entityFactory = entityFactory;
+        this.metrics = metrics;
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public CustomerResponseDTO create(CustomerDTO dto) {
         final String currentCustomerToken = securityService.getCurrentCustomerToken();
 
@@ -57,15 +61,22 @@ public class CustomerServiceImpl implements CustomerService {
 
         Customer customer = entityFactory.convertToEntity(dto, Customer.class);
         customer.setOwnerToken(currentCustomerToken);
-        return entityFactory.convertToDTO(customerRepository.save(customer), CustomerResponseDTO.class);
+        customer = customerRepository.save(customer);
+
+        // Increment metrics
+        metrics.incrementCustomerCreated(currentCustomerToken);
+
+        return entityFactory.convertToDTO(customer, CustomerResponseDTO.class);
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public CustomerResponseDTO findById(String customerId) {
         return entityFactory.convertToDTO(getCustomer(customerId), CustomerResponseDTO.class);
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<CustomerResponseDTO> findAll() {
         String token = securityService.getCurrentCustomerToken();
         return customerRepository.findAllWithAccess(token, securityService.isAdmin(token))
@@ -75,6 +86,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public CustomerResponseDTO update(String customerId, CustomerDTO dto) {
         Customer customer = getCustomer(customerId);
         customer.setName(dto.getName());
@@ -84,6 +96,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public CustomerResponseDTO update(String customerId, CustomerPatchDTO dto) {
 
         if (dto.getName() == null && dto.getTimezone() == null) {
@@ -96,6 +109,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public CustomerBatchUpdateResponseDTO batchUpdate(CustomerBatchUpdateDTO dto) {
 
         final List<String> ids = dto.getUpdates().stream()
@@ -158,9 +172,19 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void delete(String customerId) {
+
+        if (!customerExist(customerId)) {
+            logger.error("Customer with id: {} not found", customerId);
+            throw new ResourceNotFoundException("Customer not found");
+        }
+
         customerRepository.delete(getCustomer(customerId));
-        logger.error("Customer with id: {} deleted successfully", customerId);
+
+        // Increment metrics
+        metrics.incrementCustomerDeleted(securityService.getCurrentCustomerToken());
+        logger.info("Customer with id: {} deleted successfully", customerId);
     }
 
     @Override

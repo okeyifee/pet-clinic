@@ -1,5 +1,6 @@
 package com.samuel.sniffers.config;
 
+import io.swagger.v3.oas.models.tags.Tag;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -27,6 +28,7 @@ public class OpenApiConfig {
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
-                                .description("Enter your bearer token:")));
+                                .description("Enter your bearer token:")))
+                .addTagsItem(new Tag().name("metrics").description("Application metrics"));
     }
 }

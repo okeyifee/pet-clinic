@@ -65,4 +65,8 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
             @Param("token") String token,
             @Param("isAdmin") boolean isAdmin
     );
+
+    List<Customer> findByOwnerToken(String ownerToken);
+
+    long countByOwnerToken(String ownerToken);
 }

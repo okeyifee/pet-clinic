@@ -13,6 +13,7 @@ import com.samuel.sniffers.dto.response.BatchUpdateFailure;
 import com.samuel.sniffers.entity.Customer;
 import com.samuel.sniffers.entity.ShoppingBasket;
 import com.samuel.sniffers.enums.BasketStatus;
+import com.samuel.sniffers.metrics.PetShopMetrics;
 import com.samuel.sniffers.repository.ShoppingBasketRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
@@ -26,25 +27,28 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(isolation = Isolation.READ_COMMITTED)
 public class ShoppingBasketServiceImpl implements ShoppingBasketService {
 
     private static final String BASKET_NOT_FOUND = "Basket not found or access denied";
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger;
     private final ShoppingBasketRepository basketRepository;
     private final CustomerService customerService;
     private final SecurityService securityService;
     private final EntityFactory entityFactory;
+    private final PetShopMetrics metrics;
 
-    public ShoppingBasketServiceImpl(ShoppingBasketRepository basketRepository, CustomerService customerService, SecurityService securityService, EntityFactory entityFactory) {
+    public ShoppingBasketServiceImpl(ShoppingBasketRepository basketRepository, CustomerService customerService, SecurityService securityService, EntityFactory entityFactory, PetShopMetrics metrics) {
         this.basketRepository = basketRepository;
         this.customerService = customerService;
         this.securityService = securityService;
         this.entityFactory = entityFactory;
+        this.metrics = metrics;
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public BasketResponseDTO createBasket(String customerId) {
         Customer customer = customerService.getCustomer(customerId);
 
@@ -52,16 +56,20 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
         basket.setCustomer(customer);
         basket.setStatus(BasketStatus.NEW);
 
-        return entityFactory.convertToDTO(basketRepository.save(basket), BasketResponseDTO.class);
+        ShoppingBasket entity = basketRepository.save(basket);
+        metrics.incrementBasketStatus(securityService.getCurrentCustomerToken(), BasketStatus.NEW, 1);
+        return entityFactory.convertToDTO(entity, BasketResponseDTO.class);
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public BasketResponseDTO getBasket(String customerId, String basketId) {
         validateCustomerExists(customerId);
         return entityFactory.convertToDTO(getCustomerBasket(customerId, basketId), BasketResponseDTO.class);
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<BasketResponseDTO> getAllBaskets(String customerId) {
         validateCustomerExists(customerId);
         return basketRepository.findByCustomerWithAccess(
@@ -75,6 +83,7 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public BasketResponseDTO updateBasket(String customerId, String basketId, UpdateBasketDTO dto) {
         validateCustomerExists(customerId);
 
@@ -82,7 +91,7 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
 
         updateBasketStatus(shoppingBasket, dto.getStatus());
         basketRepository.save(shoppingBasket);
-
+        metrics.incrementBasketStatus(securityService.getCurrentCustomerToken(), dto.getStatus(), 1);
         return entityFactory.convertToDTO(shoppingBasket, BasketResponseDTO.class);
     }
 
@@ -125,6 +134,12 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
         }
 
         basketRepository.saveAll(updatedBaskets);
+
+        // Update metrics for successfully update records
+        baskets.stream()
+                .collect(Collectors.groupingBy(ShoppingBasket::getStatus, Collectors.counting()))
+                .forEach(this::updateMetrics);
+
         return new BasketBatchUpdateResponseDTO(
                 !updatedBaskets.isEmpty() ? updatedBaskets.size() : null,
                 !failedUpdates.isEmpty() ? failedUpdates.size() : null,
@@ -134,11 +149,13 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void deleteBasket(String customerId, String basketId) {
         validateCustomerExists(customerId);
 
         logger.info("deleting basket with id {}...", basketId);
         basketRepository.delete(getCustomerBasket(customerId, basketId));
+        metrics.incrementBasketDeleted(securityService.getCurrentCustomerToken());
         logger.info("deleted basket with id {}.", basketId);
     }
 
@@ -176,5 +193,9 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
                         securityService.isAdmin(securityService.getCurrentCustomerToken())
                 )
                 .orElseThrow(() -> new ResourceNotFoundException(BASKET_NOT_FOUND));
+    }
+
+    private void updateMetrics(BasketStatus status, Long count) {
+        metrics.incrementBasketStatus(securityService.getCurrentCustomerToken(), status, 1);
     }
 }

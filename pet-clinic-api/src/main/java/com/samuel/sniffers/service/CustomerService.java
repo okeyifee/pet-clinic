@@ -28,4 +28,8 @@ public interface CustomerService {
     Customer getCustomer(String customerId);
 
     boolean customerExist(String customerId);
+
+//    CustomerResponseDTO getCustomerOverview(String customerId);
+
+//    List<CustomerResponseDTO> getCustomersOverview();
 }
