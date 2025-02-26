@@ -1,5 +1,6 @@
 package com.samuel.sniffers;
 
+import org.slf4j.MDC;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,9 +11,10 @@ import com.samuel.sniffers.api.logging.Logger;
 public class PetClinicApplication {
 
 	public static void main(String[] args) {
-		final Logger logger = LoggerFactory.getLogger(PetClinicApplication.class);
+		// Add unique correlation id at app startUp
+		MDC.put("correlationId", LoggerFactory.getCorrelationId());
 
-		logger.info("Starting PetClinic application...");
+		LoggerFactory.getLogger(PetClinicApplication.class).info("Starting PetClinic application...");
 		SpringApplication.run(PetClinicApplication.class, args);
 	}
 }

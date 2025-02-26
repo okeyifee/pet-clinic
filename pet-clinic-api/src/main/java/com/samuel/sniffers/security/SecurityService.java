@@ -5,18 +5,20 @@ import com.samuel.sniffers.api.exception.UnauthorizedException;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
 import com.samuel.sniffers.config.TokenConfig;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
-@RequiredArgsConstructor
 public class SecurityService {
 
     private final TokenConfig tokenConfig;
+    private final Logger logger;
 
-    final Logger logger = LoggerFactory.getLogger(this.getClass());
+    public SecurityService(TokenConfig tokenConfig) {
+        this.tokenConfig = tokenConfig;
+        logger = LoggerFactory.getLogger(this.getClass());
+    }
 
     public String getCurrentCustomerToken() {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -39,6 +41,7 @@ public class SecurityService {
     }
 
     public boolean isValidToken() {
+        logger.debug("Validating if customer token is valid.");
         final String currentToken = getCurrentCustomerToken();
         return isAdmin(currentToken) || isCustomer(currentToken);
     }
