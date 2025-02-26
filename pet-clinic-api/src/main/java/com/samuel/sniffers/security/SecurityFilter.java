@@ -7,7 +7,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -18,14 +18,17 @@ import java.io.IOException;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RequiredArgsConstructor
 public class SecurityFilter extends OncePerRequestFilter {
 
     private final SecurityService securityService;
-
     private final HandlerExceptionResolver handlerExceptionResolver;
+    private final Logger log;
 
-    final Logger log = LoggerFactory.getLogger(this.getClass());
+    public SecurityFilter(SecurityService securityService, HandlerExceptionResolver handlerExceptionResolver) {
+        this.securityService = securityService;
+        this.handlerExceptionResolver = handlerExceptionResolver;
+        this.log = LoggerFactory.getLogger(this.getClass());
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -33,12 +36,18 @@ public class SecurityFilter extends OncePerRequestFilter {
         return path.contains("/swagger-ui") ||
                 path.contains("/v3/api-docs") ||
                 path.contains("/api/v3") ||
-                path.contains("/api-docs");
+                path.contains("/api-docs") ||
+                path.contains("/actuator/health") ||
+                path.contains("/api/v1/system-metrics") || // No auth for system-metrics endpoint
+                path.contains("/actuator/info");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain filterChain) throws UnauthorizedException, ServletException, IOException {
+
+        // Add unique correlation id to any request
+        MDC.put("correlationId", LoggerFactory.getCorrelationId());
 
         try {
             if (!securityService.isValidToken()) {

@@ -18,13 +18,14 @@ import java.util.Map;
 @Component
 public class JacksonModelFactory implements EntityFactory {
     private final ObjectMapper objectMapper;
-    private final Logger logger = LoggerFactory.getLogger(JacksonModelFactory.class);
+    private final Logger logger;
 
 
     public JacksonModelFactory() {
         this.objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule()); // Register JavaTimeModule for Java 8 date/time types
         this.objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Override
