@@ -2,6 +2,7 @@ package com.samuel.sniffers.service.impl;
 
 import com.samuel.sniffers.api.constants.SecurityConstants;
 import com.samuel.sniffers.dto.CustomerDTO;
+import com.samuel.sniffers.dto.ItemDTO;
 import com.samuel.sniffers.entity.Customer;
 import com.samuel.sniffers.entity.ShoppingBasket;
 import com.samuel.sniffers.security.SecurityFilter;
@@ -27,6 +28,7 @@ public abstract class BaseServiceTest {
 
     private Customer customer;
     private CustomerDTO customerDTO;
+    private ItemDTO itemDTO;
     private ShoppingBasket basket;
 
     protected Customer getAdminCustomer() {
@@ -61,6 +63,14 @@ public abstract class BaseServiceTest {
         customerDTO.setTimezone(timezone);
 
         return customerDTO;
+    }
+
+    protected ItemDTO getItemDTO(String description, Integer amount) {
+        itemDTO = new ItemDTO();
+        itemDTO.setDescription(description);
+        itemDTO.setAmount(amount);
+
+        return itemDTO;
     }
 
 //
