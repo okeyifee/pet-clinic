@@ -26,12 +26,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(isolation = Isolation.READ_COMMITTED)
 public class ShoppingBasketServiceImpl implements ShoppingBasketService {
 
     private static final String BASKET_NOT_FOUND = "Basket not found or access denied";
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger;
     private final ShoppingBasketRepository basketRepository;
     private final CustomerService customerService;
     private final SecurityService securityService;
@@ -42,9 +41,11 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
         this.customerService = customerService;
         this.securityService = securityService;
         this.entityFactory = entityFactory;
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public BasketResponseDTO createBasket(String customerId) {
         Customer customer = customerService.getCustomer(customerId);
 
@@ -56,12 +57,14 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public BasketResponseDTO getBasket(String customerId, String basketId) {
         validateCustomerExists(customerId);
         return entityFactory.convertToDTO(getCustomerBasket(customerId, basketId), BasketResponseDTO.class);
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<BasketResponseDTO> getAllBaskets(String customerId) {
         validateCustomerExists(customerId);
         return basketRepository.findByCustomerWithAccess(
@@ -75,6 +78,7 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public BasketResponseDTO updateBasket(String customerId, String basketId, UpdateBasketDTO dto) {
         validateCustomerExists(customerId);
 
@@ -134,6 +138,7 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void deleteBasket(String customerId, String basketId) {
         validateCustomerExists(customerId);
 

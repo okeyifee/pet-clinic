@@ -28,12 +28,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(isolation = Isolation.READ_COMMITTED)
 public class ItemServiceImpl implements ItemService {
 
     private static final String ITEM_NOT_FOUND = "Item not found or access denied";
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger;
     private final ItemRepository itemRepository;
     private final CustomerService customerService;
     private final SecurityService securityService;
@@ -44,9 +43,11 @@ public class ItemServiceImpl implements ItemService {
         this.customerService = customerService;
         this.securityService = securityService;
         this.entityFactory = entityFactory;
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemResponseDTO createItem(String customerId, String basketId, ItemDTO dto) {
         Customer customer = customerService.getCustomer(customerId);
 
@@ -62,6 +63,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemResponseDTO getItem(String customerId, String basketId, String itemId) {
         validateCustomerExists(customerId);
 
@@ -84,6 +86,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemResponseDTO updateItem(String customerId, String basketId, String itemId, ItemDTO dto) {
         validateCustomerExists(customerId);
         Item item = getDatabaseItem(customerId, basketId, itemId);
@@ -95,6 +98,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemResponseDTO updateItem(String customerId, String basketId, String itemId, UpdateItemDTO dto) {
 
         if (dto.getDescription() == null && dto.getAmount() == null) {
@@ -108,6 +112,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemBatchUpdateResponseDTO batchUpdateItems(String customerId, String basketId, BatchItemUpdateDTO dto) {
         validateCustomerExists(customerId);
 
@@ -155,6 +160,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void deleteItem(String customerId, String basketId, String itemId) {
         validateCustomerExists(customerId);
         Item item = getDatabaseItem(customerId, basketId, itemId);

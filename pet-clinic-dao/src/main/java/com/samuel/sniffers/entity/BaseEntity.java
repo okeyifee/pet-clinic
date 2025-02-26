@@ -1,5 +1,6 @@
 package com.samuel.sniffers.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,6 +18,7 @@ public abstract class BaseEntity {
     @Column(name = "id", columnDefinition = "CHAR(36)") // UUID v5 stored as CHAR(36)
     private String id;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Column(name = "created", nullable = false, updatable = false)
     private LocalDateTime created;
 
