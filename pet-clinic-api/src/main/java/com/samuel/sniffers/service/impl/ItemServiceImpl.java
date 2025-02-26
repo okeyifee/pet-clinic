@@ -1,7 +1,11 @@
 package com.samuel.sniffers.service.impl;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.samuel.sniffers.api.exception.InvalidRequestException;
 import com.samuel.sniffers.api.exception.ResourceNotFoundException;
+import com.samuel.sniffers.api.exception.StreamingException;
 import com.samuel.sniffers.api.factory.EntityFactory;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
@@ -9,6 +13,7 @@ import com.samuel.sniffers.dto.BatchItemUpdateDTO;
 import com.samuel.sniffers.dto.ItemDTO;
 import com.samuel.sniffers.dto.UpdateItemDTO;
 import com.samuel.sniffers.dto.response.BatchUpdateFailure;
+import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.dto.response.ItemBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.ItemResponseDTO;
 import com.samuel.sniffers.entity.Customer;
@@ -22,10 +27,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class ItemServiceImpl implements ItemService {
@@ -83,6 +91,33 @@ public class ItemServiceImpl implements ItemService {
                 .stream()
                 .map(item -> entityFactory.convertToDTO(item, ItemResponseDTO.class))
                 .toList();
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void streamAllToResponse(OutputStream outputStream, String customerId, String basketId) {
+        String token = securityService.getCurrentCustomerToken();
+        boolean isAdmin = securityService.isAdmin(token);
+
+        try {
+            ObjectMapper objectMapper = entityFactory.getObjectMapperForStreaming();
+            JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream);
+
+            try (Stream<Item> customerStream = itemRepository.streamAllWithAccess(basketId, customerId, token, isAdmin)) {
+                customerStream.forEach(item -> {
+                    try {
+                        ItemResponseDTO dto = entityFactory.convertToDTO(item, ItemResponseDTO.class);
+                        objectMapper.writeValue(jsonGenerator, dto);
+                        jsonGenerator.writeRaw('\n');
+                        jsonGenerator.flush();
+                    } catch (IOException e) {
+                        throw new StreamingException("Error streaming item data", e);
+                    }
+                });
+            }
+        } catch (IOException e) {
+            throw new StreamingException("Error initializing JSON generator", e);
+        }
     }
 
     @Override

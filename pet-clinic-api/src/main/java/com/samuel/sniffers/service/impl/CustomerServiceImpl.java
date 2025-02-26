@@ -1,8 +1,12 @@
 package com.samuel.sniffers.service.impl;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.samuel.sniffers.api.exception.CustomerAlreadyExistsException;
 import com.samuel.sniffers.api.exception.InvalidRequestException;
 import com.samuel.sniffers.api.exception.ResourceNotFoundException;
+import com.samuel.sniffers.api.exception.StreamingException;
 import com.samuel.sniffers.api.factory.EntityFactory;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
@@ -21,11 +25,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
@@ -75,6 +82,35 @@ public class CustomerServiceImpl implements CustomerService {
                 .stream()
                 .map(customer -> entityFactory.convertToDTO(customer, CustomerResponseDTO.class))
                 .toList();
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void streamAllToResponse(OutputStream outputStream) {
+        String token = securityService.getCurrentCustomerToken();
+        boolean isAdmin = securityService.isAdmin(token);
+
+        try {
+            ObjectMapper objectMapper = entityFactory.getObjectMapperForStreaming();
+
+            try (
+                    Stream<Customer> customerStream = customerRepository.streamAllWithAccess(token, isAdmin);
+                    JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream)
+            ) {
+                customerStream.forEach(customer -> {
+                    try {
+                        CustomerResponseDTO dto = entityFactory.convertToDTO(customer, CustomerResponseDTO.class);
+                        objectMapper.writeValue(jsonGenerator, dto);
+                        jsonGenerator.writeRaw('\n');
+                        jsonGenerator.flush();
+                    } catch (IOException e) {
+                        throw new StreamingException("Error streaming customer data", e);
+                    }
+                });
+            }
+        } catch (IOException e) {
+            throw new StreamingException("Error initializing JSON generator", e);
+        }
     }
 
     @Override

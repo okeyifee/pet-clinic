@@ -13,13 +13,11 @@ import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.net.URI;
 import java.util.List;
 
-/*
-  This class provides CRUD methods for a customer.
-*/
 @RestController
 @RequestMapping(value = "/v1/customer", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Customer controller", description = "APIs for managing customers")
@@ -52,6 +50,22 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<List<CustomerResponseDTO>>> getAllCustomers() {
         List<CustomerResponseDTO> customers = customerService.findAll();
         return ResponseEntity.ok(ApiResponse.success(customers));
+    }
+
+    @Operation(summary = "Stream all customers", description = "Streams a list of customers as newline-delimited JSON")
+    @GetMapping(
+            value = "/stream",
+            produces = {
+            "application/x-ndjson",
+            MediaType.APPLICATION_JSON_VALUE,
+            MediaType.TEXT_PLAIN_VALUE
+    })
+    public ResponseEntity<StreamingResponseBody> streamAllCustomers() {
+        StreamingResponseBody responseBody = customerService::streamAllToResponse;
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/x-ndjson"))
+                .body(responseBody);
     }
 
     @Operation(summary = "Update customer", description = "Updates customer information")

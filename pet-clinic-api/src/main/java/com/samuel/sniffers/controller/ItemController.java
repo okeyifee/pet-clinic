@@ -13,13 +13,12 @@ import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.net.URI;
 import java.util.List;
 
-/*
-  This class provides CRUD methods for items.
-*/
+
 @RestController
 @RequestMapping(value = "/v1/customer/{customerId}/basket/{basketId}/item", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Item controller", description = "APIs for managing basket items")
@@ -64,6 +63,24 @@ public class ItemController {
     ) {
         List<ItemResponseDTO> items = itemService.getAllItems(customerId, basketId);
         return ResponseEntity.ok(ApiResponse.success("Items retrieved successfully.", items));
+    }
+
+    @Operation(summary = "Stream all Items", description = "Streams a list of items as newline-delimited JSON")
+    @GetMapping(
+            value = "/stream",
+            produces = {
+                    "application/x-ndjson",
+                    MediaType.APPLICATION_JSON_VALUE,
+                    MediaType.TEXT_PLAIN_VALUE
+            })
+    public ResponseEntity<StreamingResponseBody> streamAllCustomers(@PathVariable String customerId,
+                                                                    @PathVariable String basketId) {
+
+        StreamingResponseBody responseBody = outputStream -> itemService.streamAllToResponse(outputStream, customerId, basketId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/x-ndjson"))
+                .body(responseBody);
     }
 
     @Operation(summary = "Update an item", description = "Updates the given item")

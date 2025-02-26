@@ -5,6 +5,7 @@ import com.samuel.sniffers.api.DateTimeUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.http.HttpStatus;
 
 @Data
 @NoArgsConstructor
@@ -26,19 +27,15 @@ public class ApiResponse<T> {
     }
 
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(200, "Success", data, null);
+        return new ApiResponse<>(HttpStatus.OK.value(), "Success", data, null);
     }
 
     public static <T> ApiResponse<T> success(String message, T data) {
-        return new ApiResponse<>(200, message, data, null);
+        return new ApiResponse<>(HttpStatus.OK.value(), message, data, null);
     }
 
     public static <T> ApiResponse<T> created(String message, T data) {
-        return new ApiResponse<>(201, message, data, null);
-    }
-
-    public static ApiResponse<Void> success(String message) {
-        return new ApiResponse<>(200, message, null, null);
+        return new ApiResponse<>(HttpStatus.CREATED.value(), message, data, null);
     }
 
     public static <T> ApiResponse<T> error(int errorCode, String message, T error) {

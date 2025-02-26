@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public interface CustomerRepository extends JpaRepository<Customer, String> {
 
@@ -65,4 +66,15 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
             @Param("token") String token,
             @Param("isAdmin") boolean isAdmin
     );
+
+    /**
+     * Stream all customers with access control based on token and admin status.
+     * IMPORTANT: This stream must be closed after use to prevent connection leaks.
+     */
+    @Query("""
+        SELECT c FROM Customer c 
+        WHERE c.ownerToken = :token OR :isAdmin = true
+    """)
+    Stream<Customer> streamAllWithAccess(@Param("token") String token, @Param("isAdmin") boolean isAdmin);
+
 }

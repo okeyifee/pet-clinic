@@ -5,7 +5,9 @@ import com.samuel.sniffers.dto.ItemDTO;
 import com.samuel.sniffers.dto.UpdateItemDTO;
 import com.samuel.sniffers.dto.response.ItemBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.ItemResponseDTO;
+import org.springframework.web.bind.annotation.PathVariable;
 
+import java.io.OutputStream;
 import java.util.List;
 
 public interface ItemService {
@@ -15,6 +17,8 @@ public interface ItemService {
     ItemResponseDTO getItem(String customerId, String basketId, String itemId);
 
     List<ItemResponseDTO> getAllItems(String customerId, String basketId);
+
+    void streamAllToResponse(OutputStream outputStream, String customerId, String basketId);
 
     ItemResponseDTO updateItem(String customerId, String basketId, String itemId, ItemDTO dto);
 

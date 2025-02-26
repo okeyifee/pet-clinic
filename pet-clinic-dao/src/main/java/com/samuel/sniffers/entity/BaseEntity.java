@@ -25,9 +25,8 @@ public abstract class BaseEntity {
     @PrePersist
     protected void onCreate() {
         // Use a namespace and a unique name to generate UUID v5
-        final String namespace = "urn:my-namespace";
         final String name = "unique-id-" + System.nanoTime(); // Unique name for each entity instance
-        this.id = UUID.nameUUIDFromBytes((namespace + name).getBytes(StandardCharsets.UTF_8)).toString();
+        this.id = UUID.nameUUIDFromBytes(("urn:my-namespace" + name).getBytes(StandardCharsets.UTF_8)).toString();
         this.created = LocalDateTime.now(); // Set created timestamp
     }
 }

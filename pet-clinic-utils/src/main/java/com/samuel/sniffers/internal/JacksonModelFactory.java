@@ -1,12 +1,19 @@
 package com.samuel.sniffers.internal;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.samuel.sniffers.api.exception.EntityMappingException;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.factory.EntityFactory;
 import com.samuel.sniffers.api.logging.Logger;
+
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -143,5 +150,27 @@ public class JacksonModelFactory implements EntityFactory {
             logger.error("Failed to convert entity list to JSON string: {}", e.getMessage(), e);
             throw new EntityMappingException("Failed to convert entity list to JSON string", e);
         }
+    }
+
+    @Override
+    public ObjectMapper getObjectMapperForStreaming() {
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(JsonGenerator.Feature.FLUSH_PASSED_TO_STREAM, false);
+        mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        mapper.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+        JavaTimeModule javaTimeModule = new JavaTimeModule();
+        javaTimeModule.addDeserializer(LocalDateTime.class,
+                new LocalDateTimeDeserializer(
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+                )
+        );
+
+        mapper.registerModule(javaTimeModule);
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+
+        return mapper;
     }
 }

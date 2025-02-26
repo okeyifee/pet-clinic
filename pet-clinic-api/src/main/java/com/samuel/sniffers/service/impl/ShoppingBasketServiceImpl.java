@@ -1,7 +1,10 @@
 package com.samuel.sniffers.service.impl;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.samuel.sniffers.api.exception.IllegalStateTransitionException;
 import com.samuel.sniffers.api.exception.ResourceNotFoundException;
+import com.samuel.sniffers.api.exception.StreamingException;
 import com.samuel.sniffers.api.factory.EntityFactory;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
@@ -10,6 +13,7 @@ import com.samuel.sniffers.dto.UpdateBasketDTO;
 import com.samuel.sniffers.dto.response.BasketBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.BasketResponseDTO;
 import com.samuel.sniffers.dto.response.BatchUpdateFailure;
+import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.entity.Customer;
 import com.samuel.sniffers.entity.ShoppingBasket;
 import com.samuel.sniffers.enums.BasketStatus;
@@ -21,9 +25,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class ShoppingBasketServiceImpl implements ShoppingBasketService {
@@ -75,6 +85,33 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
                 .stream()
                 .map(basket -> entityFactory.convertToDTO(basket, BasketResponseDTO.class))
                 .toList();
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void streamAllToResponse(OutputStream outputStream, String customerId) {
+        String token = securityService.getCurrentCustomerToken();
+        boolean isAdmin = securityService.isAdmin(token);
+
+        try {
+            ObjectMapper objectMapper = entityFactory.getObjectMapperForStreaming();
+            JsonGenerator jsonGenerator = objectMapper.getFactory().createGenerator(outputStream);
+
+            try (Stream<ShoppingBasket> customerStream = basketRepository.streamAllWithAccess(customerId, token, isAdmin)) {
+                customerStream.forEach(basket -> {
+                    try {
+                        BasketResponseDTO dto = entityFactory.convertToDTO(basket, BasketResponseDTO.class);
+                        objectMapper.writeValue(jsonGenerator, dto);
+                        jsonGenerator.writeRaw('\n');
+                        jsonGenerator.flush();
+                    } catch (IOException e) {
+                        throw new StreamingException("Error streaming basket data", e);
+                    }
+                });
+            }
+        } catch (IOException e) {
+            throw new StreamingException("Error initializing JSON generator", e);
+        }
     }
 
     @Override

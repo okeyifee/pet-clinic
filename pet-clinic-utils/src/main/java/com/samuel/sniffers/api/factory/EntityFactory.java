@@ -1,5 +1,6 @@
 package com.samuel.sniffers.api.factory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.samuel.sniffers.api.exception.EntityMappingException;
 
 import java.util.List;
@@ -112,4 +113,8 @@ public interface EntityFactory {
      */
     <T> String convertEntityListToString(List<T> entityList);
 
+    /**
+     * Return an Object mapper configured for writing streams.
+     */
+    ObjectMapper getObjectMapperForStreaming();
 }

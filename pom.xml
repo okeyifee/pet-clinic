@@ -99,7 +99,7 @@
 		<!-- Test Dependencies -->
 		<dependency>
 			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId> <!-- H2 In-memory Database for unit tests -->
+			<artifactId>h2</artifactId> <!-- H2 In-memory Database for tests -->
 			<version>${version.h2}</version>
 			<scope>test</scope>
 		</dependency>

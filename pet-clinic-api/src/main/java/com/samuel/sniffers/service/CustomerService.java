@@ -7,6 +7,7 @@ import com.samuel.sniffers.dto.response.CustomerBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.entity.Customer;
 
+import java.io.OutputStream;
 import java.util.List;
 
 public interface CustomerService {
@@ -16,6 +17,8 @@ public interface CustomerService {
     CustomerResponseDTO findById(String id);
 
     List<CustomerResponseDTO> findAll();
+
+    void streamAllToResponse(OutputStream outputStream);
 
     CustomerResponseDTO update(String id, CustomerDTO dto);
 

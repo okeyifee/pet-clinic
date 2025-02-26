@@ -12,13 +12,12 @@ import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.net.URI;
 import java.util.List;
 
-/*
-  This class provides CRUD methods for basket.
-*/
+
 @RestController
 @RequestMapping(value = "/v1/customer/{customerId}/basket", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Basket controller", description = "APIs for managing customers basket")
@@ -54,6 +53,22 @@ public class ShoppingBasketController {
     public ResponseEntity<ApiResponse<List<BasketResponseDTO>>> getCustomerBaskets(@PathVariable String customerId) {
         List<BasketResponseDTO> baskets = basketService.getAllBaskets(customerId);
         return ResponseEntity.ok(ApiResponse.success("Baskets retrieved successfully.", baskets));
+    }
+
+    @Operation(summary = "Stream all shopping baskets", description = "Streams a list of shopping baskets as newline-delimited JSON")
+    @GetMapping(
+            value = "/stream",
+            produces = {
+                    "application/x-ndjson",
+                    MediaType.APPLICATION_JSON_VALUE,
+                    MediaType.TEXT_PLAIN_VALUE
+            })
+    public ResponseEntity<StreamingResponseBody> streamAllCustomers(@PathVariable String customerId) {
+        StreamingResponseBody responseBody = outputStream -> basketService.streamAllToResponse(outputStream, customerId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/x-ndjson"))
+                .body(responseBody);
     }
 
     @Operation(summary = "Update shopping basket", description = "Updates the shopping basket")

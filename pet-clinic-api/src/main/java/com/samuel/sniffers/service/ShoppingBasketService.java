@@ -5,6 +5,7 @@ import com.samuel.sniffers.dto.UpdateBasketDTO;
 import com.samuel.sniffers.dto.response.BasketBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.BasketResponseDTO;
 
+import java.io.OutputStream;
 import java.util.List;
 
 public interface ShoppingBasketService {
@@ -14,6 +15,8 @@ public interface ShoppingBasketService {
     BasketResponseDTO getBasket(String customerId, String basketId);
 
     List<BasketResponseDTO> getAllBaskets(String customerId);
+
+    void streamAllToResponse(OutputStream outputStream, String customerId);
 
     BasketResponseDTO updateBasket(String customerId, String basketId, UpdateBasketDTO dto);
 

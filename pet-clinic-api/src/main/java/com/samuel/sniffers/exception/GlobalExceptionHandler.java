@@ -1,7 +1,5 @@
 package com.samuel.sniffers.exception;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.samuel.sniffers.api.exception.*;
 import com.samuel.sniffers.api.factory.LoggerFactory;
@@ -19,6 +17,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,14 +27,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
-    private final ObjectMapper objectMapper;
     private final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
+        log.error("Resource not found: {}", ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(new ApiResponse<>(404, ex.getMessage(), null, null));
+                .body(new ApiResponse<>(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null, null));
     }
 
     @ExceptionHandler(UnauthorizedException.class)
@@ -43,18 +42,20 @@ public class GlobalExceptionHandler {
         log.error("Unauthorized access: {}", ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(new ApiResponse<>(401, ex.getMessage(), null, null));
+                .body(new ApiResponse<>(HttpStatus.UNAUTHORIZED.value(), ex.getMessage(), null, null));
     }
 
     @ExceptionHandler(InvalidRequestException.class)
     public ResponseEntity<ApiResponse<String>> handleInvalidRequest(InvalidRequestException ex) {
-        ApiResponse<String> response = ApiResponse.error(400, ex.getMessage(), null);
+        log.error("Invalid request: {}", ex.getMessage());
+        ApiResponse<String> response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), null);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(IllegalStateTransitionException.class)
     public ResponseEntity<ApiResponse<String>> handleIllegalStateTransition(IllegalStateTransitionException ex) {
-        ApiResponse<String> response = ApiResponse.error(422, ex.getMessage(), null);
+        log.error("Illegal basket status transition: {}", ex.getMessage());
+        ApiResponse<String> response = ApiResponse.error(HttpStatus.UNPROCESSABLE_ENTITY.value(), ex.getMessage(), null);
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
     }
 
@@ -74,128 +75,53 @@ public class GlobalExceptionHandler {
 
         // Return all validation errors
         log.error("Validation failed: {}", errors);
-        ApiResponse<Map<String, String>> response = ApiResponse.error(400,"Validation failed.", errors);
+        ApiResponse<Map<String, String>> response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(),"Validation failed.", errors);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)
     @ExceptionHandler(CustomerAlreadyExistsException.class)
     public Object handleCustomerAlreadyExists(CustomerAlreadyExistsException ex) {
-        ApiResponse<String> response = ApiResponse.error(409, ex.getMessage(), null);
+        log.error("Customer with name already exists: {}", ex.getMessage());
+        ApiResponse<String> response = ApiResponse.error(HttpStatus.CONFLICT.value(), ex.getMessage(), null);
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
-
-
-
-//    @ExceptionHandler(MethodArgumentNotValidException.class)
-//    public ResponseEntity<ApiResponse<List<String>>> handleValidation(MethodArgumentNotValidException ex) {
-//        List<String> errors = ex.getBindingResult()
-//                .getFieldErrors()
-//                .stream()
-//                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-//                .toList();
-//
-//        return ResponseEntity
-//                .status(HttpStatus.BAD_REQUEST)
-//                .body(new ApiResponse<>(400, "Validation failed", errors, DateTimeUtils.getCurrentDateTimeReadable()));
-//    }
-
-//    @ExceptionHandler(HttpMessageNotReadableException.class)
-//    public ResponseEntity<ApiResponse<String>> handleInvalidJson(HttpMessageNotReadableException ex) {
-//        String errorMessage = "Malformed JSON request";
-//
-//        log.error("Malformed request JSON received from API: {}", ex.getMessage());
-//
-//        ApiResponse<String> response = new ApiResponse<>(400, errorMessage, null, null);
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-//    }
-
-//    @ExceptionHandler(HttpMessageNotReadableException.class)
-//    public ResponseEntity<ApiResponse<Map<String, String>>> handleInvalidJson(HttpMessageNotReadableException ex) {
-//        String errorMessage = "Malformed JSON request";
-//
-//        log.error("Malformed request JSON received from API: {}", ex.getMessage(), ex);
-//
-//        // Optionally include the error details in a map, or just the message
-//        Map<String, String> errorDetails = new HashMap<>();
-//        errorDetails.put("jsonError", "Invalid JSON format or extra fields");
-//
-//        // Return ApiResponse with error details
-//        ApiResponse<Map<String, String>> response = new ApiResponse<>(400, errorMessage, null, errorDetails);
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-//    }
-
-//    // Handle malformed JSON request and check for extra fields
-//    @ExceptionHandler(HttpMessageNotReadableException.class)
-//    public ResponseEntity<ApiResponse<Map<String, String>>> handleInvalidJson(HttpMessageNotReadableException ex) {
-//        // Log the exception details
-//        String errorMessage = "Malformed JSON request";
-//
-//        // Get the raw error message from the exception
-//        String errorDetails = ex.getMessage();
-//        log.error("Malformed request JSON received from API: {}", errorDetails);
-//
-//        // Parse the raw error message to find extra fields (if present)
-//        Map<String, String> extraFields = findExtraFields(errorDetails);
-//
-//        // Create the response with a detailed error message
-//        String errorDetailMessage = extraFields.isEmpty() ? "No extra fields detected" :
-//                "Request contains unrecognized fields: " + String.join(", ", extraFields.keySet());
-//
-//        // Return the error response with detailed message about extra fields
-//        ApiResponse<Map<String, String>> response = new ApiResponse<>(400, errorMessage, null, Map.of("extraField", errorDetailMessage));
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-//    }
-//
-//    // Parse the exception message to extract extra fields
-//    private Map<String, String> findExtraFields(String errorDetails) {
-//        Map<String, String> extraFields = new HashMap<>();
-//        try {
-//            // We know that the exception message contains "Unrecognized field" when extra fields are present
-//            if (errorDetails.contains("Unrecognized field")) {
-//                // Extract extra fields from the message
-//                String[] parts = errorDetails.split("Unrecognized field(s)?: ");
-//                if (parts.length > 1) {
-//                    // Extract the extra field names from the message
-//                    String extraFieldNames = parts[1].replaceAll("[{}\\\"]", "");
-//                    String[] fieldNames = extraFieldNames.split(",");
-//                    for (String field : fieldNames) {
-//                        extraFields.put(field.trim(), "Extra field detected");
-//                    }
-//                }
-//            }
-//        } catch (Exception e) {
-//            log.error("Error parsing extra fields from the exception message: {}", e.getMessage());
-//        }
-//        return extraFields;
-//    }
-
+    @ExceptionHandler(StreamingException.class)
+    public ResponseEntity<ApiResponse<String>> handleStreamingException(StreamingException ex) {
+        log.error("Exception in the streaming API: {}", ex.getMessage());
+        ApiResponse<String> response = ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Error processing streaming request: " + ex.getMessage(), null);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<String>> handleMessageNotReadable(HttpMessageNotReadableException ex) {
-        if (ex.getCause() instanceof MismatchedInputException) {
-            MismatchedInputException cause = (MismatchedInputException) ex.getCause();
-            List<String> unknownFields = new ArrayList<>();
+    public ResponseEntity<ApiResponse<List<String>>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        Throwable cause = ex.getCause();
+        List<String> errors = new ArrayList<>();
 
-            // Get all unknown fields from the exception chain
-            Throwable current = ex;
-            while (current != null) {
-                if (current instanceof UnrecognizedPropertyException) {
-                    UnrecognizedPropertyException unrecognized = (UnrecognizedPropertyException) current;
-                    unknownFields.add(unrecognized.getPropertyName());
-                }
-                current = current.getCause();
-            }
-
-            String message = String.format("Unknown field(s): %s. These fields are not recognized",
-                    String.join(", ", unknownFields));
-
-            ApiResponse<String> response = new ApiResponse<>(400, message, null, null);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        if (cause instanceof UnrecognizedPropertyException propertyException) {
+            String fieldName = propertyException.getPropertyName();
+            errors.add("Unknown field: '" + fieldName + "'. Allowed fields are: " +
+                    propertyException.getKnownPropertyIds().toString());
+        } else {
+            errors.add("Invalid JSON: " + ex.getMessage());
         }
 
-        ApiResponse<String> response = new ApiResponse<>(400, "Invalid JSON format in request", null, null);
+        log.error("Invalid JSON payload: {}", ex.getMessage());
+        ApiResponse<List<String>> response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(),"Invalid JSON payload.", errors);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleGenericException(Exception ex) {
+        Map<String, Object> errors = new HashMap<>();
+        errors.put("timestamp", LocalDateTime.now());
+        errors.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        errors.put("error", "Internal Server Error");
+        errors.put("message", ex.getMessage());
+
+        log.error("Exception happened that couldn't be caught: {}", ex.getMessage());
+        ApiResponse<Map<String, Object>> response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(),"Validation failed.", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }
