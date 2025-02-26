@@ -1,5 +1,7 @@
 package com.samuel.sniffers.controller;
 
+import com.samuel.sniffers.api.factory.LoggerFactory;
+import com.samuel.sniffers.api.logging.Logger;
 import com.samuel.sniffers.api.response.ApiResponse;
 import com.samuel.sniffers.dto.BatchItemUpdateDTO;
 import com.samuel.sniffers.dto.ItemDTO;
@@ -17,18 +19,17 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
-/*
-  This class provides CRUD methods for items.
-*/
 @RestController
 @RequestMapping(value = "/v1/customer/{customerId}/basket/{basketId}/item", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Item controller", description = "APIs for managing basket items")
 public class ItemController {
 
     private final ItemService itemService;
+    private final Logger logger;
 
     public ItemController(ItemService itemService) {
         this.itemService = itemService;
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Operation(summary = "Create basket item", description = "Creates an item in a basket")
@@ -37,7 +38,9 @@ public class ItemController {
             @PathVariable String customerId,
             @PathVariable String basketId,
             @Valid @RequestBody ItemDTO dto) {
+        logger.debug("Processing request to create basket item...");
         ItemResponseDTO createdItem = itemService.createItem(customerId, basketId, dto);
+        logger.debug("Completed request to create basket item. Id {}.", createdItem.getId());
         return ResponseEntity
                 .created(URI.create(String.format("/api/v1/customer/%s/basket/%s/item/%s", customerId, basketId, createdItem.getId())))
                 .body(ApiResponse.created("Item created successfully.", createdItem));
@@ -49,10 +52,11 @@ public class ItemController {
             @PathVariable String customerId,
             @PathVariable String basketId,
             @PathVariable String itemId) {
-        return ResponseEntity.ok(
-                ApiResponse.success("Item retrieved successfully.",
-                        itemService.getItem(customerId, basketId, itemId)
-                )
+
+        logger.debug("Processing request to get basket item with id {} for customer {} with basket {}", itemId, customerId, basketId);
+        ItemResponseDTO item = itemService.getItem(customerId, basketId, itemId);
+        logger.debug("Processing request to create basket item...");
+        return ResponseEntity.ok(ApiResponse.success("Item retrieved successfully.", item)
         );
     }
 
@@ -62,7 +66,9 @@ public class ItemController {
             @PathVariable String customerId,
             @PathVariable String basketId
     ) {
+        logger.debug("Processing request to get all items for customer {} with basket id {}", customerId, basketId);
         List<ItemResponseDTO> items = itemService.getAllItems(customerId, basketId);
+        logger.debug("Completed request to get all items for customer {} with basket id {}", customerId, basketId);
         return ResponseEntity.ok(ApiResponse.success("Items retrieved successfully.", items));
     }
 
@@ -73,7 +79,9 @@ public class ItemController {
             @PathVariable String basketId,
             @PathVariable String itemId,
             @Valid @RequestBody UpdateItemDTO dto) {
+        logger.debug("Processing request to PATCH item {} for customer {} with basket id {}", itemId, customerId, basketId);
         ItemResponseDTO updatedItem = itemService.updateItem(customerId, basketId, itemId, dto);
+        logger.debug("Completed request to PATCH item {} for customer {} with basket id {}", itemId, customerId, basketId);
         return ResponseEntity.ok(ApiResponse.success("Item updated successfully.", updatedItem));
     }
 
@@ -84,7 +92,9 @@ public class ItemController {
             @PathVariable String basketId,
             @PathVariable String itemId,
             @Valid @RequestBody ItemDTO dto) {
+        logger.debug("Processing request to update item {} for customer {} with basket id {}", itemId, customerId, basketId);
         ItemResponseDTO updatedItem = itemService.updateItem(customerId, basketId, itemId, dto);
+        logger.debug("Completed request to update item {} for customer {} with basket id {}", itemId, customerId, basketId);
         return ResponseEntity.ok(ApiResponse.success("Item updated successfully.", updatedItem));
     }
 
@@ -94,7 +104,9 @@ public class ItemController {
             @PathVariable String customerId,
             @PathVariable String basketId,
             @Valid @RequestBody BatchItemUpdateDTO dto) {
+        logger.debug("Processing batch request to update items for customer {} with basket id {}", customerId, basketId);
         ItemBatchUpdateResponseDTO updatedItems = itemService.batchUpdateItems(customerId, basketId, dto);
+        logger.debug("Completed batch request to update items for customer {} with basket id {}", customerId, basketId);
         return ResponseEntity.ok(ApiResponse.success("Items updated successfully.", updatedItems));
     }
 
@@ -104,7 +116,9 @@ public class ItemController {
             @PathVariable String customerId,
             @PathVariable String basketId,
             @PathVariable String itemId) {
+        logger.debug("Processing request to check if item with id {} exist for customer {} in basket with id {}", itemId, customerId, basketId);
         itemService.getItem(customerId, basketId, itemId);
+        logger.debug("Completed request to check if item with id {} exist for customer {} in basket with id {}", itemId, customerId, basketId);
         return ResponseEntity.noContent().build();
     }
 
@@ -115,7 +129,9 @@ public class ItemController {
             @PathVariable String basketId,
             @PathVariable String itemId
     ) {
+        logger.debug("Processing request to delete item {} for customer {} from basket with id {}", itemId, customerId, basketId);
         itemService.deleteItem(customerId, basketId, itemId);
+        logger.debug("Completed request to delete item {} for customer {} from basket with id {}", itemId, customerId, basketId);
         return ResponseEntity.noContent().build();
     }
 }

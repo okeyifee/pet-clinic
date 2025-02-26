@@ -7,7 +7,6 @@ import com.samuel.sniffers.api.exception.*;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
 import com.samuel.sniffers.api.response.ApiResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -25,14 +24,19 @@ import java.util.List;
 import java.util.Map;
 
 @RestControllerAdvice
-@RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
     private final ObjectMapper objectMapper;
-    private final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private final Logger log;
+
+    public GlobalExceptionHandler(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+        this.log = LoggerFactory.getLogger(this.getClass());
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
+        log.error("ResourceNotFoundException occurred: {}", ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ApiResponse<>(404, ex.getMessage(), null, null));
@@ -40,7 +44,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnauthorized(UnauthorizedException ex) {
-        log.error("Unauthorized access: {}", ex.getMessage());
+        log.error("Unauthorized access exception: {}", ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(new ApiResponse<>(401, ex.getMessage(), null, null));
@@ -48,12 +52,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidRequestException.class)
     public ResponseEntity<ApiResponse<String>> handleInvalidRequest(InvalidRequestException ex) {
+        log.error("Invalid request exception: {}", ex.getMessage());
         ApiResponse<String> response = ApiResponse.error(400, ex.getMessage(), null);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(IllegalStateTransitionException.class)
     public ResponseEntity<ApiResponse<String>> handleIllegalStateTransition(IllegalStateTransitionException ex) {
+        log.error("Illegal transition exception: {}", ex.getMessage());
         ApiResponse<String> response = ApiResponse.error(422, ex.getMessage(), null);
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
     }
@@ -73,7 +79,7 @@ public class GlobalExceptionHandler {
         }
 
         // Return all validation errors
-        log.error("Validation failed: {}", errors);
+        log.error("Validation exception occurred: {}", errors);
         ApiResponse<Map<String, String>> response = ApiResponse.error(400,"Validation failed.", errors);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
@@ -81,6 +87,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     @ExceptionHandler(CustomerAlreadyExistsException.class)
     public Object handleCustomerAlreadyExists(CustomerAlreadyExistsException ex) {
+        log.error("Customer with name already exist");
         ApiResponse<String> response = ApiResponse.error(409, ex.getMessage(), null);
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -174,6 +181,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<String>> handleMessageNotReadable(HttpMessageNotReadableException ex) {
+        log.error("Bad request: {}", ex.getMessage());
         if (ex.getCause() instanceof MismatchedInputException) {
             MismatchedInputException cause = (MismatchedInputException) ex.getCause();
             List<String> unknownFields = new ArrayList<>();
