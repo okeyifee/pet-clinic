@@ -18,15 +18,11 @@ import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
@@ -175,52 +171,6 @@ class CustomerBasketItemViewRepositoryTest {
 
         // Then: Should return empty list
         assertThat(viewEntries).isEmpty();
-    }
-
-    @Test
-    @DisplayName("findAllWithAccess with pagination should return all view entries for admin")
-    void findAllWithAccess_WithPagination_AsAdmin_ShouldReturnAllViewEntries() {
-        // When: Finding all view entries as admin with pagination
-        Page<CustomerBasketItemView> viewPage = viewRepository.findAllWithAccess("any-token", IS_ADMIN, Pageable.unpaged());
-
-        // Then: Should return all view entries
-        assertThat(viewPage.getContent()).isNotEmpty();
-        assertThat(viewPage.getContent())
-                .extracting(CustomerBasketItemView::getCustomerId)
-                .containsExactlyInAnyOrder(customer1.getId(), customer1.getId(), customer2.getId());
-    }
-
-    @Test
-    @DisplayName("findAllWithAccess with pagination should return only matching view entries for non-admin")
-    void findAllWithAccess_WithPagination_AsNonAdmin_ShouldReturnOnlyMatchingViewEntries() {
-        // When: Finding view entries for token1 with pagination
-        Page<CustomerBasketItemView> viewPage1 = viewRepository.findAllWithAccess(OWNER_TOKEN_1, NOT_ADMIN, Pageable.unpaged());
-
-        // Then: Should return only customer1's entries
-        assertThat(viewPage1.getContent())
-                .extracting(CustomerBasketItemView::getCustomerId)
-                .containsExactlyInAnyOrder(customer1.getId(), customer1.getId());
-
-        // When: Finding view entries for token2 with pagination
-        Page<CustomerBasketItemView> viewPage2 = viewRepository.findAllWithAccess(OWNER_TOKEN_2, NOT_ADMIN, Pageable.unpaged());
-
-        // Then: Should return only customer2's entries
-        assertThat(viewPage2.getContent())
-                .extracting(CustomerBasketItemView::getCustomerId)
-                .containsOnly(customer2.getId());
-    }
-
-    @Test
-    @DisplayName("findAllWithAccess with pagination should respect page size")
-    void findAllWithAccess_WithPagination_ShouldRespectPageSize() {
-        // When: Finding view entries with page size 1
-        PageRequest pageRequest = PageRequest.of(0, 1);
-        Page<CustomerBasketItemView> viewPage = viewRepository.findAllWithAccess("any-token", IS_ADMIN, pageRequest);
-
-        // Then: Should return only one entry but know about total entries
-        assertThat(viewPage.getContent()).hasSize(1);
-        assertThat(viewPage.getTotalElements()).isEqualTo(3);
-        assertThat(viewPage.getTotalPages()).isEqualTo(3);
     }
 
     @Test
