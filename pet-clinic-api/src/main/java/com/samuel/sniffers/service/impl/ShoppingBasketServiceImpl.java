@@ -17,6 +17,7 @@ import com.samuel.sniffers.dto.response.BatchUpdateFailure;
 import com.samuel.sniffers.entity.Customer;
 import com.samuel.sniffers.entity.ShoppingBasket;
 import com.samuel.sniffers.enums.BasketStatus;
+import com.samuel.sniffers.metrics.PetShopMetrics;
 import com.samuel.sniffers.repository.ShoppingBasketRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
@@ -47,12 +48,14 @@ public class ShoppingBasketServiceImpl extends AbstractPaginationService impleme
     private final CustomerService customerService;
     private final SecurityService securityService;
     private final EntityFactory entityFactory;
+    private final PetShopMetrics metrics;
 
-    public ShoppingBasketServiceImpl(ShoppingBasketRepository basketRepository, CustomerService customerService, SecurityService securityService, EntityFactory entityFactory) {
+    public ShoppingBasketServiceImpl(ShoppingBasketRepository basketRepository, CustomerService customerService, SecurityService securityService, EntityFactory entityFactory, PetShopMetrics metrics) {
         this.basketRepository = basketRepository;
         this.customerService = customerService;
         this.securityService = securityService;
         this.entityFactory = entityFactory;
+        this.metrics = metrics;
         this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
@@ -65,7 +68,12 @@ public class ShoppingBasketServiceImpl extends AbstractPaginationService impleme
         basket.setCustomer(customer);
         basket.setStatus(BasketStatus.NEW);
 
-        return entityFactory.convertToDTO(basketRepository.save(basket), BasketResponseDTO.class);
+        ShoppingBasket entity = basketRepository.save(basket);
+
+        // Increment metrics
+        metrics.incrementBasketStatus(securityService.getCurrentCustomerToken(), BasketStatus.NEW, 1);
+
+        return entityFactory.convertToDTO(entity, BasketResponseDTO.class);
     }
 
     @Override
@@ -152,6 +160,9 @@ public class ShoppingBasketServiceImpl extends AbstractPaginationService impleme
         updateBasketStatus(shoppingBasket, dto.getStatus());
         basketRepository.save(shoppingBasket);
 
+        // Increment metrics
+        metrics.incrementBasketStatus(securityService.getCurrentCustomerToken(), dto.getStatus(), 1);
+
         return entityFactory.convertToDTO(shoppingBasket, BasketResponseDTO.class);
     }
 
@@ -194,6 +205,12 @@ public class ShoppingBasketServiceImpl extends AbstractPaginationService impleme
         }
 
         basketRepository.saveAll(updatedBaskets);
+
+        // Update metrics for successfully update records
+        baskets.stream()
+                .collect(Collectors.groupingBy(ShoppingBasket::getStatus, Collectors.counting()))
+                .forEach(this::updateMetrics);
+
         return new BasketBatchUpdateResponseDTO(
                 !updatedBaskets.isEmpty() ? updatedBaskets.size() : null,
                 !failedUpdates.isEmpty() ? failedUpdates.size() : null,
@@ -210,6 +227,9 @@ public class ShoppingBasketServiceImpl extends AbstractPaginationService impleme
         logger.info("deleting basket with id {}...", basketId);
         basketRepository.delete(getCustomerBasket(customerId, basketId));
         logger.info("deleted basket with id {}.", basketId);
+
+        // Increment metrics
+        metrics.incrementBasketDeleted(securityService.getCurrentCustomerToken());
     }
 
     @Override
@@ -260,5 +280,9 @@ public class ShoppingBasketServiceImpl extends AbstractPaginationService impleme
                         securityService.isAdmin(securityService.getCurrentCustomerToken())
                 )
                 .orElseThrow(() -> new ResourceNotFoundException(BASKET_NOT_FOUND));
+    }
+
+    private void updateMetrics(BasketStatus status, Long count) {
+        metrics.incrementBasketStatus(securityService.getCurrentCustomerToken(), status, 1);
     }
 }

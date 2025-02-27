@@ -126,6 +126,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiResponse<List<String>>> handleMethodNotSupportedException(
             HttpRequestMethodNotSupportedException ex) {
+        log.error("HttpRequestMethodNotSupportedException occurred: {}", ex.getMessage());
 
         List<String> errors = new ArrayList<>();
         errors.add("The API endpoint does not support '" + ex.getMethod() + "' requests.");

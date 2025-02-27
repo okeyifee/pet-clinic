@@ -1,5 +1,7 @@
 package com.samuel.sniffers.controller;
 
+import com.samuel.sniffers.api.factory.LoggerFactory;
+import com.samuel.sniffers.api.logging.Logger;
 import com.samuel.sniffers.api.response.ApiResponse;
 import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.BatchBasketUpdateDTO;
@@ -24,15 +26,19 @@ import java.net.URI;
 public class ShoppingBasketController {
 
     private final ShoppingBasketService basketService;
+    private final Logger logger;
 
     public ShoppingBasketController(ShoppingBasketService basketService) {
         this.basketService = basketService;
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Operation(summary = "Create shopping basket", description = "Creates a new shopping basket for the customer")
     @PostMapping
     public ResponseEntity<ApiResponse<BasketResponseDTO>> createBasket(@PathVariable String customerId) {
+        logger.debug("Processing request to create basket for customer {}", customerId);
         BasketResponseDTO basket = basketService.createBasket(customerId);
+        logger.debug("Completed processing request to create basket");
         return ResponseEntity
                 .created(URI.create(String.format("/api/v1/customer/%s/basket/%s", customerId, basket.getId())))
                 .body(ApiResponse.created("Shopping basket created successfully.", basket));

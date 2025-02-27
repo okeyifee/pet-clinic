@@ -1,5 +1,7 @@
 package com.samuel.sniffers.controller;
 
+import com.samuel.sniffers.api.factory.LoggerFactory;
+import com.samuel.sniffers.api.logging.Logger;
 import com.samuel.sniffers.api.response.ApiResponse;
 import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.CustomerBatchUpdateDTO;
@@ -25,15 +27,19 @@ import java.net.URI;
 public class CustomerController {
 
     private final CustomerService customerService;
+    private final Logger logger;
 
     public CustomerController(CustomerService customerService) {
         this.customerService = customerService;
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     @Operation(summary = "Create customer", description = "Creates a customer")
     @PostMapping
     public ResponseEntity<ApiResponse<CustomerResponseDTO>> createCustomer(@Valid @RequestBody CustomerDTO customerDTO) {
+        logger.debug("Processing request to create customer...");
         CustomerResponseDTO created = customerService.create(customerDTO);
+        logger.debug("Successfully created a new customer with id {}", created.getId());
         return ResponseEntity
                 .created(URI.create("/api/v1/customers/" + created.getId()))
                 .body(ApiResponse.created("Customer created successfully", created));
@@ -42,7 +48,9 @@ public class CustomerController {
     @Operation(summary = "Get customer by ID", description = "Retrieves customer details by ID")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CustomerResponseDTO>> getCustomer(@PathVariable String id) {
+        logger.debug("Processing request to retrieve customer by id...");
         CustomerResponseDTO customer = customerService.findById(id);
+        logger.debug("Successfully retrieved customer record.");
         return ResponseEntity.ok(ApiResponse.success(customer));
     }
 
@@ -55,9 +63,11 @@ public class CustomerController {
             @RequestParam(defaultValue = "asc") String direction,
             HttpServletRequest request) {
 
+        logger.debug("Processing request to get customer get all customers.");
         PagedResponse<CustomerResponseDTO> response = customerService.findAll(
                 page, size, sortBy, direction, request.getRequestURL().toString());
 
+        logger.debug("Completed request to get customer get all customers.");
         return ResponseEntity.ok(response);
     }
 
@@ -70,7 +80,12 @@ public class CustomerController {
             MediaType.TEXT_PLAIN_VALUE
     })
     public ResponseEntity<StreamingResponseBody> streamAllCustomers() {
+
+        logger.debug("Processing request to retrieve customers using stream API");
+
         StreamingResponseBody responseBody = customerService::streamAllToResponse;
+
+        logger.debug("Completed request to retrieve customers using stream API. Status: successful");
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/x-ndjson"))
@@ -82,7 +97,11 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<CustomerResponseDTO>> updateCustomer(
             @PathVariable String id,
             @Valid @RequestBody CustomerDTO customerDTO) {
+
+        logger.debug("Processing request to update customer with id {}.", id);
         CustomerResponseDTO updated = customerService.update(id, customerDTO);
+
+        logger.debug("Completed request to update customer with id {}.", id);
         return ResponseEntity.ok(ApiResponse.success("Customer updated successfully", updated));
     }
 
@@ -106,7 +125,11 @@ public class CustomerController {
     @Operation(summary = "Delete customer", description = "Deletes customer record")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable String id) {
+        logger.debug("Processing request to delete customer with id {}.", id);
+
         customerService.delete(id);
+
+        logger.debug("Completed request to delete customer with id {}.", id);
         return ResponseEntity.noContent().build();
     }
 
