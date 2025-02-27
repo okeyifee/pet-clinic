@@ -9,6 +9,8 @@ CREATE TABLE customers (
     UNIQUE (owner_token, name)
 );
 
+CREATE INDEX idx_customers_owner_token ON customers (owner_token);
+
 CREATE TABLE shopping_baskets (
     id CHAR(36) NOT NULL,
     created DATETIME NOT NULL,
@@ -20,6 +22,8 @@ CREATE TABLE shopping_baskets (
     CHECK (status IN ('NEW', 'PAID', 'PROCESSED', 'UNKNOWN'))
 );
 
+CREATE INDEX idx_baskets_customer_id ON shopping_baskets (customer_id);
+
 CREATE TABLE items (
     id CHAR(36) NOT NULL,
     description VARCHAR(100) NOT NULL,
@@ -30,6 +34,8 @@ CREATE TABLE items (
     FOREIGN KEY (basket_id) REFERENCES shopping_baskets(id) ON DELETE CASCADE,
     CHECK (amount >= 1)
 );
+
+CREATE INDEX idx_items_basket_id ON items (basket_id);
 
 CREATE OR REPLACE VIEW customer_basket_item_overview AS
 SELECT
