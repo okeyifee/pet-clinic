@@ -4,6 +4,7 @@ import com.samuel.sniffers.api.exception.CustomerAlreadyExistsException;
 import com.samuel.sniffers.api.exception.InvalidRequestException;
 import com.samuel.sniffers.api.exception.ResourceNotFoundException;
 import com.samuel.sniffers.api.factory.EntityFactory;
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.CustomerBatchUpdateDTO;
 import com.samuel.sniffers.dto.CustomerDTO;
 import com.samuel.sniffers.dto.CustomerPatchDTO;
@@ -86,7 +87,6 @@ class CustomerServiceImplTest extends BaseServiceTest {
         assertThat(response.getCreated()).isInThePast();
     }
 
-
     @Test
     @DisplayName("create - Should throw exception when customer already exists")
     void createCustomerAlreadyExists() throws ServletException, IOException {
@@ -142,6 +142,157 @@ class CustomerServiceImplTest extends BaseServiceTest {
         assertThatThrownBy(() -> customerService.findById(inValidId))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Customer not found");
+    }
+
+    @Test
+    @DisplayName("findAll - Should return all customers for admin")
+    void findAll_AsAdmin_ShouldReturnAllCustomers() throws ServletException, IOException {
+        // Setup context with admin token
+        setUpTestWithToken(securityFilter, mockFilterChain, TEST_ADMIN_TOKEN);
+
+        // Create multiple customers with unique names
+        CustomerDTO customerDTO1 = getCustomerDTO("Unique Admin1", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
+        CustomerDTO customerDTO2 = getCustomerDTO("Unique Admin2", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
+        CustomerDTO customerDTO3 = getCustomerDTO("Unique Admin3", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
+
+        customerService.create(customerDTO1);
+        customerService.create(customerDTO2);
+        customerService.create(customerDTO3);
+
+        // Act
+        PagedResponse<CustomerResponseDTO> result = customerService.findAll(1, 10, "name", "asc", "/api/customers");
+
+        // Assert
+        assertThat(result.getData()).hasSize(3);
+        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        assertThat(result.getData())
+                .extracting(CustomerResponseDTO::getName)
+                .containsExactly("Unique Admin1", "Unique Admin2", "Unique Admin3");
+
+        // Additional assertions for PagedResponse
+        assertThat(result.getPage()).isEqualTo(1);
+        assertThat(result.getSize()).isEqualTo(10);
+        assertThat(result.isLast()).isTrue();
+        assertThat(result.getLinks()).isNotNull();
+        assertThat(result.getLinks()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("findAll - Should return only customers for non-admin user")
+    void findAll_AsNonAdmin_ShouldReturnOnlyUserCustomers() throws ServletException, IOException {
+
+        // Setup context with admin token
+        setUpTestWithToken(securityFilter, mockFilterChain, TEST_ADMIN_TOKEN);
+        CustomerDTO customerDTO1 = getCustomerDTO("Unique Customer 3", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
+        customerService.create(customerDTO1);
+
+        // Setup context with customer 2 token
+        setUpTestWithToken(securityFilter, mockFilterChain, TEST_CUSTOMER2_TOKEN);
+        CustomerDTO customerDTO2 = getCustomerDTO("Unique Customer 2", TEST_TIMEZONE_UTC, TEST_CUSTOMER2_TOKEN);
+        customerService.create(customerDTO2);
+
+        // Setup context with customer 1 token
+        setUpTestWithToken(securityFilter, mockFilterChain, TEST_CUSTOMER1_TOKEN);
+        CustomerDTO customerDTO3 = getCustomerDTO("Unique Customer 1", TEST_TIMEZONE_UTC, TEST_CUSTOMER1_TOKEN);
+        customerService.create(customerDTO3);
+
+        // Act
+        PagedResponse<CustomerResponseDTO> result = customerService.findAll(1, 10, "name", "asc", "/api/customers");
+
+        // Assert
+        assertThat(result.getData()).hasSize(1);
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        assertThat(result.getData())
+                .extracting(CustomerResponseDTO::getName)
+                .containsOnly("Unique Customer 1");
+    }
+
+    @Test
+    @DisplayName("findAll - Should handle pagination correctly")
+    void findAll_ShouldHandlePagination() throws ServletException, IOException {
+        // Setup context with admin token
+        setUpTestWithToken(securityFilter, mockFilterChain, TEST_ADMIN_TOKEN);
+
+        // Create multiple customers with unique names
+        for (int i = 1; i <= 5; i++) {
+            CustomerDTO customerDTO = getCustomerDTO("Unique Admin " + i, TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
+            customerService.create(customerDTO);
+        }
+
+        // Act - First page with 2 items
+        PagedResponse<CustomerResponseDTO> resultPage1 = customerService.findAll(1, 2, "name", "asc", "/api/customers");
+
+        // Assert first page
+        assertThat(resultPage1.getData()).hasSize(2);
+        assertThat(resultPage1.getTotalElements()).isEqualTo(5);
+        assertThat(resultPage1.getTotalPages()).isEqualTo(3);
+        assertThat(resultPage1.getData())
+                .extracting(CustomerResponseDTO::getName)
+                .containsExactly("Unique Admin 1", "Unique Admin 2");
+        assertThat(resultPage1.isLast()).isFalse();
+
+        // Act - Second page with 2 items
+        PagedResponse<CustomerResponseDTO> resultPage2 = customerService.findAll(2, 2, "name", "asc", "/api/customers");
+
+        // Assert second page
+        assertThat(resultPage2.getData()).hasSize(2);
+        assertThat(resultPage2.getTotalElements()).isEqualTo(5);
+        assertThat(resultPage2.getTotalPages()).isEqualTo(3);
+        assertThat(resultPage2.getData())
+                .extracting(CustomerResponseDTO::getName)
+                .containsExactly("Unique Admin 3", "Unique Admin 4");
+    }
+
+    @Test
+    @DisplayName("findAll - Should return empty page when no customers exist")
+    void findAll_ShouldReturnEmptyPageWhenNoCustomers() throws ServletException, IOException {
+        // Setup context with admin token
+        setUpTestWithToken(securityFilter, mockFilterChain, TEST_ADMIN_TOKEN);
+
+        // Act
+        PagedResponse<CustomerResponseDTO> result = customerService.findAll(1, 10, "name", "asc", "/api/customers");
+
+        // Assert
+        assertThat(result.getData()).isEmpty();
+        assertThat(result.getTotalElements()).isZero();
+        assertThat(result.getTotalPages()).isZero();
+        assertThat(result.getPage()).isEqualTo(1);
+        assertThat(result.getSize()).isEqualTo(10);
+        assertThat(result.isLast()).isTrue();
+    }
+
+    @Test
+    @DisplayName("findAll - Should handle sorting correctly")
+    void findAll_ShouldHandleSorting() throws ServletException, IOException {
+        // Setup context with admin token
+        setUpTestWithToken(securityFilter, mockFilterChain, TEST_ADMIN_TOKEN);
+
+        // Create customers in mixed order with unique names
+        CustomerDTO customerDTO1 = getCustomerDTO("Z Unique Customer", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
+        CustomerDTO customerDTO2 = getCustomerDTO("A Unique Customer", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
+        CustomerDTO customerDTO3 = getCustomerDTO("M Unique Customer", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
+
+        customerService.create(customerDTO1);
+        customerService.create(customerDTO2);
+        customerService.create(customerDTO3);
+
+        // Act - Ascending sort
+        PagedResponse<CustomerResponseDTO> resultAsc = customerService.findAll(1, 10, "name", "asc", "/api/customers");
+
+        // Assert ascending sort
+        assertThat(resultAsc.getData())
+                .extracting(CustomerResponseDTO::getName)
+                .containsExactly("A Unique Customer", "M Unique Customer", "Z Unique Customer");
+
+        // Act - Descending sort
+        PagedResponse<CustomerResponseDTO> resultDesc = customerService.findAll(1, 10, "name", "desc", "/api/customers");
+
+        // Assert descending sort
+        assertThat(resultDesc.getData())
+                .extracting(CustomerResponseDTO::getName)
+                .containsExactly("Z Unique Customer", "M Unique Customer", "A Unique Customer");
     }
 
     @Test
@@ -220,58 +371,6 @@ class CustomerServiceImplTest extends BaseServiceTest {
 
         // Assert
         assertThat(result).isFalse();
-    }
-
-    @Test
-    @DisplayName("findAll - Should return an empty list if no customer is found")
-    void findAllCustomersReturnsEmptyList() throws ServletException, IOException {
-
-        // Setup context with admin token
-        setUpTestWithToken(securityFilter, mockFilterChain, TEST_ADMIN_TOKEN);
-
-        // Act
-        List<CustomerResponseDTO> result = customerService.findAll();
-
-        // Assert
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    @DisplayName("findAll - Should return list of customers")
-    void findAllCustomersReturnsEmptyListOfCustomers() throws ServletException, IOException {
-
-        // Setup context with admin token
-        setUpTestWithToken(securityFilter, mockFilterChain, TEST_ADMIN_TOKEN);
-
-        CustomerDTO customerDTO = getCustomerDTO("Test Admin", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
-        CustomerDTO customerDTO2 = getCustomerDTO("Test Admin2", TEST_TIMEZONE_UTC, TEST_ADMIN_TOKEN);
-
-        // create customer 1
-        CustomerResponseDTO responseDTO = customerService.create(customerDTO);
-
-        // create customer 2
-        CustomerResponseDTO responseDTO2 = customerService.create(customerDTO2);
-
-        List<CustomerResponseDTO> expectedList = List.of(responseDTO, responseDTO2);
-
-        // Act
-        List<CustomerResponseDTO> result = customerService.findAll();
-
-        // Assert
-        assertThat(result).isNotNull();
-        assertThat(expectedList).isNotNull();
-        assertThat(result).isNotEmpty();
-        assertThat(expectedList).isNotEmpty();
-        assertThat(result).hasSameSizeAs(expectedList);
-
-        for (CustomerResponseDTO expectedCustomer : expectedList) {
-            CustomerResponseDTO actualCustomer = result.stream()
-                    .filter(b -> b.getId().equals(expectedCustomer.getId()))
-                    .findFirst()
-                    .orElseThrow(() -> new AssertionError("Customer with ID " + expectedCustomer.getId() + " not found"));
-
-            validateCustomerMatch(expectedCustomer, actualCustomer);
-        }
     }
 
     @Test

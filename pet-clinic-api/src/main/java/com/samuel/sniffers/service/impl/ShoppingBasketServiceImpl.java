@@ -116,6 +116,8 @@ public class ShoppingBasketServiceImpl extends AbstractPaginationService impleme
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void streamAllToResponse(OutputStream outputStream, String customerId) {
+        validateCustomerExists(customerId);
+
         String token = securityService.getCurrentCustomerToken();
         boolean isAdmin = securityService.isAdmin(token);
 
