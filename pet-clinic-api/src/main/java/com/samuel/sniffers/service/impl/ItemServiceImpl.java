@@ -17,6 +17,7 @@ import com.samuel.sniffers.dto.response.ItemBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.ItemResponseDTO;
 import com.samuel.sniffers.entity.Item;
 import com.samuel.sniffers.entity.ShoppingBasket;
+import com.samuel.sniffers.metrics.PetShopMetrics;
 import com.samuel.sniffers.repository.ItemRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
@@ -47,13 +48,15 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
     private final ShoppingBasketService basketService;
     private final SecurityService securityService;
     private final EntityFactory entityFactory;
+    private final PetShopMetrics metrics;
 
-    public ItemServiceImpl(ItemRepository itemRepository, CustomerService customerService, ShoppingBasketService basketService, SecurityService securityService, EntityFactory entityFactory) {
+    public ItemServiceImpl(ItemRepository itemRepository, CustomerService customerService, ShoppingBasketService basketService, SecurityService securityService, EntityFactory entityFactory, PetShopMetrics metrics) {
         this.itemRepository = itemRepository;
         this.customerService = customerService;
         this.basketService = basketService;
         this.securityService = securityService;
         this.entityFactory = entityFactory;
+        this.metrics = metrics;
         this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
@@ -66,7 +69,13 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
 
         Item item = entityFactory.convertToEntity(dto, Item.class);
         item.setBasket(userBasket);
-        return entityFactory.convertToDTO(itemRepository.save(item), ItemResponseDTO.class);
+
+        Item entity = itemRepository.save(item);
+
+        // Increment metrics
+        metrics.incrementItemAdded(securityService.getCurrentCustomerToken());
+
+        return entityFactory.convertToDTO(entity, ItemResponseDTO.class);
     }
 
     @Override
@@ -239,6 +248,9 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
 
         itemRepository.delete(item);
         logger.info("deleted item with id {}", itemId);
+
+        // Increment metrics
+        metrics.incrementItemDeleted(securityService.getCurrentCustomerToken());
     }
 
     private void validateCustomerExists(String customerId) {

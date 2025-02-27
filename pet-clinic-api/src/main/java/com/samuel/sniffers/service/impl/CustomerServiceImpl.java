@@ -17,6 +17,7 @@ import com.samuel.sniffers.dto.response.BatchUpdateFailure;
 import com.samuel.sniffers.dto.response.CustomerBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.entity.Customer;
+import com.samuel.sniffers.metrics.PetShopMetrics;
 import com.samuel.sniffers.repository.CustomerRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
@@ -43,12 +44,14 @@ public class CustomerServiceImpl extends AbstractPaginationService implements Cu
     private final CustomerRepository customerRepository;
     private final SecurityService securityService;
     private final EntityFactory entityFactory;
+    private final PetShopMetrics metrics;
 
     @Autowired
-    public CustomerServiceImpl(CustomerRepository customerRepository, SecurityService securityService, EntityFactory entityFactory) {
+    public CustomerServiceImpl(CustomerRepository customerRepository, SecurityService securityService, EntityFactory entityFactory, PetShopMetrics metrics) {
         this.customerRepository = customerRepository;
         this.securityService = securityService;
         this.entityFactory = entityFactory;
+        this.metrics = metrics;
         this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
@@ -67,7 +70,13 @@ public class CustomerServiceImpl extends AbstractPaginationService implements Cu
 
         Customer customer = entityFactory.convertToEntity(dto, Customer.class);
         customer.setOwnerToken(currentCustomerToken);
-        return entityFactory.convertToDTO(customerRepository.save(customer), CustomerResponseDTO.class);
+
+        Customer entity = customerRepository.save(customer);
+
+        // Increment metrics
+        metrics.incrementCustomerCreated(securityService.getCurrentCustomerToken());
+
+        return entityFactory.convertToDTO(entity, CustomerResponseDTO.class);
     }
 
     @Override
@@ -240,6 +249,10 @@ public class CustomerServiceImpl extends AbstractPaginationService implements Cu
 
         customerRepository.delete(getCustomer(customerId));
         logger.error("Customer with id: {} deleted successfully", customerId);
+
+
+        // Increment metrics
+        metrics.incrementCustomerDeleted(securityService.getCurrentCustomerToken());
     }
 
     @Override
