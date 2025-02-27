@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -98,18 +99,39 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<List<String>>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
         Throwable cause = ex.getCause();
         List<String> errors = new ArrayList<>();
+        final String missingPayload = "Required request body is missing";
+        final String invalidPayloadResponse = "Invalid JSON payload.";
+        ApiResponse<List<String>> response;
 
         if (cause instanceof UnrecognizedPropertyException propertyException) {
             String fieldName = propertyException.getPropertyName();
             errors.add("Unknown field: '" + fieldName + "'. Allowed fields are: " +
                     propertyException.getKnownPropertyIds().toString());
+            response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(), invalidPayloadResponse, errors);
         } else {
-            errors.add("Invalid JSON: " + ex.getMessage());
+            if (ex.getMessage().startsWith(missingPayload)) {
+                // Limit exposing internals
+                errors.add(missingPayload);
+                response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(),"Missing JSON payload.", errors);
+            } else {
+                errors.add("Invalid JSON: " + ex.getMessage());
+                response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(),invalidPayloadResponse, errors);
+            }
         }
 
         log.error("Invalid JSON payload: {}", ex.getMessage());
-        ApiResponse<List<String>> response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(),"Invalid JSON payload.", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<List<String>>> handleMethodNotSupportedException(
+            HttpRequestMethodNotSupportedException ex) {
+
+        List<String> errors = new ArrayList<>();
+        errors.add("The API endpoint does not support '" + ex.getMethod() + "' requests.");
+
+        ApiResponse<List<String>> response = ApiResponse.error(HttpStatus.METHOD_NOT_ALLOWED.value(), "Error occurred.", errors);
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
     }
 
     @ExceptionHandler(Exception.class)
@@ -120,8 +142,8 @@ public class GlobalExceptionHandler {
         errors.put("error", "Internal Server Error");
         errors.put("message", ex.getMessage());
 
-        log.error("Exception happened that couldn't be caught: {}", ex.getMessage());
-        ApiResponse<Map<String, Object>> response = ApiResponse.error(HttpStatus.BAD_REQUEST.value(),"Validation failed.", errors);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        log.error("Exception happened: {}", ex.getMessage());
+        ApiResponse<Map<String, Object>> response = ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Error occurred.", errors);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }

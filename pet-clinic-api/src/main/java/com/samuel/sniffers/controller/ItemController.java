@@ -1,6 +1,7 @@
 package com.samuel.sniffers.controller;
 
 import com.samuel.sniffers.api.response.ApiResponse;
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.BatchItemUpdateDTO;
 import com.samuel.sniffers.dto.ItemDTO;
 import com.samuel.sniffers.dto.UpdateItemDTO;
@@ -9,6 +10,7 @@ import com.samuel.sniffers.dto.response.ItemResponseDTO;
 import com.samuel.sniffers.service.ItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.net.URI;
-import java.util.List;
-
 
 @RestController
 @RequestMapping(value = "/v1/customer/{customerId}/basket/{basketId}/item", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -55,14 +55,21 @@ public class ItemController {
         );
     }
 
-    @Operation(summary = "Retrieve all items", description = "Retrieves all items in a given basket for a given customer")
+    @Operation(summary = "Get all items", description = "Retrieves a paginated list of all items in a given basket for a given customer")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ItemResponseDTO>>> getItems(
+    public ResponseEntity<PagedResponse<ItemResponseDTO>> getAllItems(
             @PathVariable String customerId,
-            @PathVariable String basketId
-    ) {
-        List<ItemResponseDTO> items = itemService.getAllItems(customerId, basketId);
-        return ResponseEntity.ok(ApiResponse.success("Items retrieved successfully.", items));
+            @PathVariable String basketId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction,
+            HttpServletRequest request) {
+
+        PagedResponse<ItemResponseDTO> response = itemService.findAll(
+                customerId, basketId, page, size, sortBy, direction, request.getRequestURL().toString());
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Stream all Items", description = "Streams a list of items as newline-delimited JSON")

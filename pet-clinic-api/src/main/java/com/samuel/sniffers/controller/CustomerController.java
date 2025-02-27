@@ -1,6 +1,7 @@
 package com.samuel.sniffers.controller;
 
 import com.samuel.sniffers.api.response.ApiResponse;
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.CustomerBatchUpdateDTO;
 import com.samuel.sniffers.dto.CustomerDTO;
 import com.samuel.sniffers.dto.CustomerPatchDTO;
@@ -9,6 +10,7 @@ import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping(value = "/v1/customer", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -45,11 +46,19 @@ public class CustomerController {
         return ResponseEntity.ok(ApiResponse.success(customer));
     }
 
-    @Operation(summary = "Get all customers", description = "Retrieves a list of customers")
+    @Operation(summary = "Get all customers", description = "Retrieves a paginated list of customers")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CustomerResponseDTO>>> getAllCustomers() {
-        List<CustomerResponseDTO> customers = customerService.findAll();
-        return ResponseEntity.ok(ApiResponse.success(customers));
+    public ResponseEntity<PagedResponse<CustomerResponseDTO>> getAllCustomers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction,
+            HttpServletRequest request) {
+
+        PagedResponse<CustomerResponseDTO> response = customerService.findAll(
+                page, size, sortBy, direction, request.getRequestURL().toString());
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Stream all customers", description = "Streams a list of customers as newline-delimited JSON")

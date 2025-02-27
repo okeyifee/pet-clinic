@@ -16,6 +16,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Stream;
@@ -148,26 +153,52 @@ class ShoppingBasketRepositoryTest {
     @Test
     @DisplayName("findByCustomerWithAccess should return all baskets for customer as admin")
     void findByCustomerWithAccess_AsAdmin_ShouldReturnAllBasketsForCustomer() {
-        // When: Finding baskets for customer1 as admin
-        List<ShoppingBasket> baskets = basketRepository.findByCustomerWithAccess(
-                customer1.getId(), "any-token", IS_ADMIN);
+        // When: Finding baskets for customer1 as admin with pagination
+        Page<ShoppingBasket> basketPage = basketRepository.findByCustomerWithAccess(
+                customer1.getId(), "any-token", IS_ADMIN, Pageable.unpaged());
 
         // Then: Should return all baskets for customer1
-        assertThat(baskets).hasSize(2);
-        assertThat(baskets).extracting(ShoppingBasket::getId)
+        assertThat(basketPage.getContent()).hasSize(2);
+        assertThat(basketPage.getContent()).extracting(ShoppingBasket::getId)
                 .containsExactlyInAnyOrder(basket1.getId(), basket2.getId());
     }
 
     @Test
     @DisplayName("findByCustomerWithAccess should return baskets for matching token")
     void findByCustomerWithAccess_WithMatchingToken_ShouldReturnBaskets() {
-        // When: Finding baskets for customer1 with matching token
-        List<ShoppingBasket> baskets = basketRepository.findByCustomerWithAccess(
-                customer1.getId(), OWNER_TOKEN_1, NOT_ADMIN);
+        // When: Finding baskets for customer1 with matching token and pagination
+        Page<ShoppingBasket> basketPage = basketRepository.findByCustomerWithAccess(
+                customer1.getId(), OWNER_TOKEN_1, NOT_ADMIN, Pageable.unpaged());
 
         // Then: Should return baskets for customer1
-        assertThat(baskets).hasSize(2);
-        assertThat(baskets).extracting(ShoppingBasket::getId)
+        assertThat(basketPage.getContent()).hasSize(2);
+        assertThat(basketPage.getContent()).extracting(ShoppingBasket::getId)
                 .containsExactlyInAnyOrder(basket1.getId(), basket2.getId());
+    }
+
+    @Test
+    @DisplayName("findByCustomerWithAccess should return empty page for non-matching token")
+    void findByCustomerWithAccess_WithNonMatchingToken_ShouldReturnEmptyPage() {
+        // When: Finding baskets for customer1 with non-matching token
+        Page<ShoppingBasket> basketPage = basketRepository.findByCustomerWithAccess(
+                customer1.getId(), OWNER_TOKEN_2, NOT_ADMIN, Pageable.unpaged());
+
+        // Then: Should return empty page (no access)
+        assertThat(basketPage.getContent()).isEmpty();
+        assertThat(basketPage.getTotalElements()).isZero();
+    }
+
+    @Test
+    @DisplayName("findByCustomerWithAccess should respect pagination")
+    void findByCustomerWithAccess_WithPagination_ShouldRespectPageSize() {
+        // When: Finding baskets with page size 1
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        Page<ShoppingBasket> basketPage = basketRepository.findByCustomerWithAccess(
+                customer1.getId(), OWNER_TOKEN_1, NOT_ADMIN, pageRequest);
+
+        // Then: Should return only one basket but know about both
+        assertThat(basketPage.getContent()).hasSize(1);
+        assertThat(basketPage.getTotalElements()).isEqualTo(2);
+        assertThat(basketPage.getTotalPages()).isEqualTo(2);
     }
 }

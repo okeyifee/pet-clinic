@@ -2,7 +2,6 @@ package com.samuel.sniffers.service.impl;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.samuel.sniffers.api.exception.CustomerAlreadyExistsException;
 import com.samuel.sniffers.api.exception.InvalidRequestException;
 import com.samuel.sniffers.api.exception.ResourceNotFoundException;
@@ -10,6 +9,7 @@ import com.samuel.sniffers.api.exception.StreamingException;
 import com.samuel.sniffers.api.factory.EntityFactory;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.CustomerBatchUpdateDTO;
 import com.samuel.sniffers.dto.CustomerDTO;
 import com.samuel.sniffers.dto.CustomerPatchDTO;
@@ -21,6 +21,8 @@ import com.samuel.sniffers.repository.CustomerRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
-public class CustomerServiceImpl implements CustomerService {
+public class CustomerServiceImpl extends AbstractPaginationService implements CustomerService {
 
     private final Logger logger;
     private final CustomerRepository customerRepository;
@@ -76,12 +78,40 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public List<CustomerResponseDTO> findAll() {
+    public PagedResponse<CustomerResponseDTO> findAll(
+            int page, int size, String sortBy, String direction, String baseUrl) {
+
+        // Create page request
+        PageRequest pageRequest = PageRequest.of(
+                Math.max(0, page - 1), // Spring Data's pagination follows a zero-based indexing approach
+                size,
+                getSanitizedSortDirection(direction),
+                getSanitizedCustomerSortBy(sortBy)
+        );
+
         String token = securityService.getCurrentCustomerToken();
-        return customerRepository.findAllWithAccess(token, securityService.isAdmin(token))
-                .stream()
+        boolean isAdmin = securityService.isAdmin(token);
+
+        Page<Customer> customersPage = customerRepository.findAllWithAccess(token, isAdmin, pageRequest);
+
+        // Map entities to DTOs
+        List<CustomerResponseDTO> customerDTOs = customersPage.getContent().stream()
                 .map(customer -> entityFactory.convertToDTO(customer, CustomerResponseDTO.class))
                 .toList();
+
+        // Create paged response
+        PagedResponse<CustomerResponseDTO> response = new PagedResponse<>(
+                customerDTOs,
+                customersPage.getNumber() + 1,
+                customersPage.getSize(),
+                customersPage.getTotalElements(),
+                customersPage.getTotalPages(),
+                customersPage.isLast()
+        );
+
+        // Add pagination links
+        response.setLinks(buildPaginationLinks(baseUrl, size, sortBy, direction, page, customersPage));
+        return response;
     }
 
     @Override

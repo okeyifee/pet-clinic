@@ -1,12 +1,12 @@
 package com.samuel.sniffers.service;
 
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.BatchBasketUpdateDTO;
 import com.samuel.sniffers.dto.UpdateBasketDTO;
 import com.samuel.sniffers.dto.response.BasketBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.BasketResponseDTO;
 
 import java.io.OutputStream;
-import java.util.List;
 
 public interface ShoppingBasketService {
 
@@ -14,7 +14,7 @@ public interface ShoppingBasketService {
 
     BasketResponseDTO getBasket(String customerId, String basketId);
 
-    List<BasketResponseDTO> getAllBaskets(String customerId);
+    PagedResponse<BasketResponseDTO> findAll(String customerId, int page, int size, String sortBy, String direction, String baseUrl);
 
     void streamAllToResponse(OutputStream outputStream, String customerId);
 

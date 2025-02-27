@@ -8,12 +8,12 @@ import com.samuel.sniffers.api.exception.StreamingException;
 import com.samuel.sniffers.api.factory.EntityFactory;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.BatchBasketUpdateDTO;
 import com.samuel.sniffers.dto.UpdateBasketDTO;
 import com.samuel.sniffers.dto.response.BasketBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.BasketResponseDTO;
 import com.samuel.sniffers.dto.response.BatchUpdateFailure;
-import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.entity.Customer;
 import com.samuel.sniffers.entity.ShoppingBasket;
 import com.samuel.sniffers.enums.BasketStatus;
@@ -21,6 +21,8 @@ import com.samuel.sniffers.repository.ShoppingBasketRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
 import com.samuel.sniffers.service.ShoppingBasketService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +38,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
-public class ShoppingBasketServiceImpl implements ShoppingBasketService {
+public class ShoppingBasketServiceImpl extends AbstractPaginationService implements ShoppingBasketService {
 
     private static final String BASKET_NOT_FOUND = "Basket not found or access denied";
 
@@ -75,16 +77,40 @@ public class ShoppingBasketServiceImpl implements ShoppingBasketService {
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public List<BasketResponseDTO> getAllBaskets(String customerId) {
+    public PagedResponse<BasketResponseDTO> findAll(String customerId, int page, int size, String sortBy, String direction, String baseUrl) {
         validateCustomerExists(customerId);
-        return basketRepository.findByCustomerWithAccess(
-                        customerId,
-                        securityService.getCurrentCustomerToken(),
-                        securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .stream()
+
+        // Sanitize and Create page request -> Avoid attacks on db via query params
+        PageRequest pageRequest = PageRequest.of(
+                Math.max(0, page - 1), // Spring Data's pagination follows a zero-based indexing approach
+                size,
+                getSanitizedSortDirection(direction),
+                getSanitizedBasketSortBy(sortBy)
+        );
+
+        String token = securityService.getCurrentCustomerToken();
+        boolean isAdmin = securityService.isAdmin(token);
+
+        Page<ShoppingBasket> basketsPage = basketRepository.findByCustomerWithAccess(customerId, token, isAdmin, pageRequest);
+
+        // Map entities to DTOs
+        List<BasketResponseDTO> basketDTOs = basketsPage.getContent().stream()
                 .map(basket -> entityFactory.convertToDTO(basket, BasketResponseDTO.class))
                 .toList();
+
+        // Create paged response
+        PagedResponse<BasketResponseDTO> response = new PagedResponse<>(
+                basketDTOs,
+                basketsPage.getNumber() + 1,
+                basketsPage.getSize(),
+                basketsPage.getTotalElements(),
+                basketsPage.getTotalPages(),
+                basketsPage.isLast()
+        );
+
+        // Add pagination links
+        response.setLinks(buildPaginationLinks(baseUrl, size, sortBy, direction, page, basketsPage));
+        return response;
     }
 
     @Override

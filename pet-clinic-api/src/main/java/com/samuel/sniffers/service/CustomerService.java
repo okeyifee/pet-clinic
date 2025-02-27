@@ -1,5 +1,6 @@
 package com.samuel.sniffers.service;
 
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.CustomerBatchUpdateDTO;
 import com.samuel.sniffers.dto.CustomerDTO;
 import com.samuel.sniffers.dto.CustomerPatchDTO;
@@ -8,7 +9,6 @@ import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.entity.Customer;
 
 import java.io.OutputStream;
-import java.util.List;
 
 public interface CustomerService {
 
@@ -16,7 +16,7 @@ public interface CustomerService {
 
     CustomerResponseDTO findById(String id);
 
-    List<CustomerResponseDTO> findAll();
+    PagedResponse<CustomerResponseDTO> findAll(int page, int size, String sortBy, String direction, String baseUrl);
 
     void streamAllToResponse(OutputStream outputStream);
 

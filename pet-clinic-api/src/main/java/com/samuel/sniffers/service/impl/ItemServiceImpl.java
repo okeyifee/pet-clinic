@@ -2,18 +2,17 @@ package com.samuel.sniffers.service.impl;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.samuel.sniffers.api.exception.InvalidRequestException;
 import com.samuel.sniffers.api.exception.ResourceNotFoundException;
 import com.samuel.sniffers.api.exception.StreamingException;
 import com.samuel.sniffers.api.factory.EntityFactory;
 import com.samuel.sniffers.api.factory.LoggerFactory;
 import com.samuel.sniffers.api.logging.Logger;
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.BatchItemUpdateDTO;
 import com.samuel.sniffers.dto.ItemDTO;
 import com.samuel.sniffers.dto.UpdateItemDTO;
 import com.samuel.sniffers.dto.response.BatchUpdateFailure;
-import com.samuel.sniffers.dto.response.CustomerResponseDTO;
 import com.samuel.sniffers.dto.response.ItemBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.ItemResponseDTO;
 import com.samuel.sniffers.entity.Customer;
@@ -23,6 +22,8 @@ import com.samuel.sniffers.repository.ItemRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
 import com.samuel.sniffers.service.ItemService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
-public class ItemServiceImpl implements ItemService {
+public class ItemServiceImpl extends AbstractPaginationService implements ItemService {
 
     private static final String ITEM_NOT_FOUND = "Item not found or access denied";
 
@@ -80,17 +81,43 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public List<ItemResponseDTO> getAllItems(String customerId, String basketId) {
+    public PagedResponse<ItemResponseDTO> findAll(String customerId, String basketId,
+            int page, int size, String sortBy, String direction, String baseUrl) {
+
         validateCustomerExists(customerId);
-        return itemRepository.findByCustomerWithAccess(
-                basketId,
-                customerId,
-                securityService.getCurrentCustomerToken(),
-                securityService.isAdmin(securityService.getCurrentCustomerToken())
-                )
-                .stream()
+
+        // Sanitize and Create page request -> Avoid attacks on db via query params
+        PageRequest pageRequest = PageRequest.of(
+                Math.max(0, page - 1), // Spring Data's pagination follows a zero-based indexing approach
+                size,
+                getSanitizedSortDirection(direction),
+                getSanitizedItemSortBy(sortBy)
+        );
+
+        String token = securityService.getCurrentCustomerToken();
+        boolean isAdmin = securityService.isAdmin(token);
+
+        Page<Item> itemsPage = itemRepository.findByCustomerWithAccess(basketId, customerId, token, isAdmin, pageRequest);
+
+        // Map entities to DTOs
+        List<ItemResponseDTO> itemDTOs = itemsPage.getContent().stream()
                 .map(item -> entityFactory.convertToDTO(item, ItemResponseDTO.class))
                 .toList();
+
+        // Create paged response
+        PagedResponse<ItemResponseDTO> response = new PagedResponse<>(
+                itemDTOs,
+                itemsPage.getNumber() + 1,
+                itemsPage.getSize(),
+                itemsPage.getTotalElements(),
+                itemsPage.getTotalPages(),
+                itemsPage.isLast()
+        );
+
+        // Add pagination links
+        response.setLinks(buildPaginationLinks(baseUrl, size, sortBy, direction, page, itemsPage));
+
+        return response;
     }
 
     @Override

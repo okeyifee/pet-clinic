@@ -17,6 +17,11 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -185,26 +190,54 @@ class ItemRepositoryTest {
     @Test
     @DisplayName("findByCustomerWithAccess should return all items for basket as admin")
     void findByCustomerWithAccess_AsAdmin_ShouldReturnAllItemsForBasket() {
-        // When: Finding items for basket1 as admin
-        List<Item> items = itemRepository.findByCustomerWithAccess(
-                basket1.getId(), customer1.getId(), "any-token", IS_ADMIN);
+        // When: Finding items for basket1 as admin with pagination
+        Page<Item> itemPage = itemRepository.findByCustomerWithAccess(
+                basket1.getId(), customer1.getId(), "any-token", IS_ADMIN, Pageable.unpaged());
 
         // Then: Should return all items in basket1
-        assertThat(items).hasSize(2);
-        assertThat(items).extracting(Item::getId)
+        assertThat(itemPage.getContent()).hasSize(2);
+        assertThat(itemPage.getContent()).extracting(Item::getId)
                 .containsExactlyInAnyOrder(item1.getId(), item2.getId());
+        assertThat(itemPage.getTotalElements()).isEqualTo(2);
     }
 
     @Test
     @DisplayName("findByCustomerWithAccess should return items for matching token")
     void findByCustomerWithAccess_WithMatchingToken_ShouldReturnItems() {
-        // When: Finding items for basket1 with matching token
-        List<Item> items = itemRepository.findByCustomerWithAccess(
-                basket1.getId(), customer1.getId(), OWNER_TOKEN_1, NOT_ADMIN);
+        // When: Finding items for basket1 with matching token and pagination
+        Page<Item> itemPage = itemRepository.findByCustomerWithAccess(
+                basket1.getId(), customer1.getId(), OWNER_TOKEN_1, NOT_ADMIN, Pageable.unpaged());
 
         // Then: Should return items in basket1
-        assertThat(items).hasSize(2);
-        assertThat(items).extracting(Item::getId)
+        assertThat(itemPage.getContent()).hasSize(2);
+        assertThat(itemPage.getContent()).extracting(Item::getId)
                 .containsExactlyInAnyOrder(item1.getId(), item2.getId());
+        assertThat(itemPage.getTotalElements()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("findByCustomerWithAccess should return empty page for non-matching token")
+    void findByCustomerWithAccess_WithNonMatchingToken_ShouldReturnEmptyPage() {
+        // When: Finding items for basket1 with non-matching token
+        Page<Item> itemPage = itemRepository.findByCustomerWithAccess(
+                basket1.getId(), customer1.getId(), OWNER_TOKEN_2, NOT_ADMIN, Pageable.unpaged());
+
+        // Then: Should return empty page (no access)
+        assertThat(itemPage.getContent()).isEmpty();
+        assertThat(itemPage.getTotalElements()).isZero();
+    }
+
+    @Test
+    @DisplayName("findByCustomerWithAccess should respect pagination")
+    void findByCustomerWithAccess_WithPagination_ShouldRespectPageSize() {
+        // When: Finding items with page size 1
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        Page<Item> itemPage = itemRepository.findByCustomerWithAccess(
+                basket1.getId(), customer1.getId(), OWNER_TOKEN_1, NOT_ADMIN, pageRequest);
+
+        // Then: Should return only one item but know about both
+        assertThat(itemPage.getContent()).hasSize(1);
+        assertThat(itemPage.getTotalElements()).isEqualTo(2);
+        assertThat(itemPage.getTotalPages()).isEqualTo(2);
     }
 }

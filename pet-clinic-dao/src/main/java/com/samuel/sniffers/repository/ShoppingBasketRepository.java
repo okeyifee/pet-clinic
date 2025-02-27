@@ -1,6 +1,8 @@
 package com.samuel.sniffers.repository;
 
 import com.samuel.sniffers.entity.ShoppingBasket;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -31,10 +33,11 @@ public interface ShoppingBasketRepository extends JpaRepository<ShoppingBasket, 
         WHERE c.id = :customerId
         AND (c.ownerToken = :token OR :isAdmin = true)
     """)
-    List<ShoppingBasket> findByCustomerWithAccess(
+    Page<ShoppingBasket> findByCustomerWithAccess(
             @Param("customerId") String customerId,
             @Param("token") String token,
-            @Param("isAdmin") boolean isAdmin
+            @Param("isAdmin") boolean isAdmin,
+            Pageable pageable
     );
 
     @Query("""

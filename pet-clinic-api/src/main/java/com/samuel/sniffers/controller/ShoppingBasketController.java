@@ -1,6 +1,7 @@
 package com.samuel.sniffers.controller;
 
 import com.samuel.sniffers.api.response.ApiResponse;
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.BatchBasketUpdateDTO;
 import com.samuel.sniffers.dto.UpdateBasketDTO;
 import com.samuel.sniffers.dto.response.BasketBatchUpdateResponseDTO;
@@ -8,6 +9,7 @@ import com.samuel.sniffers.dto.response.BasketResponseDTO;
 import com.samuel.sniffers.service.ShoppingBasketService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.net.URI;
-import java.util.List;
-
 
 @RestController
 @RequestMapping(value = "/v1/customer/{customerId}/basket", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -48,11 +48,20 @@ public class ShoppingBasketController {
         );
     }
 
-    @Operation(summary = "Retrieve all baskets for a customer", description = "Fetches all shopping baskets belonging to a customer")
+    @Operation(summary = "Get all baskets for a customer", description = "Retrieves a paginated list of all shopping baskets belonging to a customer")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<BasketResponseDTO>>> getCustomerBaskets(@PathVariable String customerId) {
-        List<BasketResponseDTO> baskets = basketService.getAllBaskets(customerId);
-        return ResponseEntity.ok(ApiResponse.success("Baskets retrieved successfully.", baskets));
+    public ResponseEntity<PagedResponse<BasketResponseDTO>> getAllBaskets(
+            @PathVariable String customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction,
+            HttpServletRequest request) {
+
+        PagedResponse<BasketResponseDTO> response = basketService.findAll(
+                customerId, page, size, sortBy, direction, request.getRequestURL().toString());
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Stream all shopping baskets", description = "Streams a list of shopping baskets as newline-delimited JSON")

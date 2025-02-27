@@ -1,14 +1,13 @@
 package com.samuel.sniffers.service;
 
+import com.samuel.sniffers.api.response.PagedResponse;
 import com.samuel.sniffers.dto.BatchItemUpdateDTO;
 import com.samuel.sniffers.dto.ItemDTO;
 import com.samuel.sniffers.dto.UpdateItemDTO;
 import com.samuel.sniffers.dto.response.ItemBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.ItemResponseDTO;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import java.io.OutputStream;
-import java.util.List;
 
 public interface ItemService {
 
@@ -16,7 +15,7 @@ public interface ItemService {
 
     ItemResponseDTO getItem(String customerId, String basketId, String itemId);
 
-    List<ItemResponseDTO> getAllItems(String customerId, String basketId);
+    PagedResponse<ItemResponseDTO> findAll(String customerId, String basketId, int page, int size, String sortBy, String direction, String baseUrl);
 
     void streamAllToResponse(OutputStream outputStream, String customerId, String basketId);
 

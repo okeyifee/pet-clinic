@@ -1,6 +1,8 @@
 package com.samuel.sniffers.repository;
 
 import com.samuel.sniffers.entity.Item;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,11 +39,12 @@ public interface ItemRepository extends JpaRepository<Item, String> {
         AND c.id = :customerId
         AND (c.ownerToken = :token OR :isAdmin = true)
     """)
-    List<Item> findByCustomerWithAccess(
+    Page<Item> findByCustomerWithAccess(
             @Param("basketId") String basketId,
             @Param("customerId") String customerId,
             @Param("token") String token,
-            @Param("isAdmin") boolean isAdmin
+            @Param("isAdmin") boolean isAdmin,
+            Pageable pageable
     );
 
     @Query("""
