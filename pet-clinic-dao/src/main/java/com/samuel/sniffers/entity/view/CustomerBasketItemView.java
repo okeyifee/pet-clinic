@@ -14,7 +14,7 @@ import java.util.Objects;
 @Entity
 @Immutable
 @Table(name = "customer_basket_item_overview")
-@IdClass(CustomerBasketItemView.CompositeKey.class)
+@IdClass(CustomerBasketItemView.CustomerKey.class)
 public class CustomerBasketItemView {
 
     @Id
@@ -41,6 +41,7 @@ public class CustomerBasketItemView {
     @Column(name = "basket_status")
     private BasketStatus basketStatus;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Column(name = "basket_created")
     private LocalDateTime basketCreated;
 
@@ -61,35 +62,59 @@ public class CustomerBasketItemView {
     @Column(name = "item_created")
     private LocalDateTime itemCreated;
 
-    // Composite Key Class
-    public static class CompositeKey implements Serializable {
+//    // Composite Key Class
+//    public static class CompositeKey implements Serializable {
+//        private String customerId;
+//        private String basketId;
+//        private String itemId;
+//
+//        // Constructors
+//        public CompositeKey() {}
+//
+//        public CompositeKey(String customerId, String basketId, String itemId) {
+//            this.customerId = customerId;
+//            this.basketId = basketId;
+//            this.itemId = itemId;
+//        }
+//
+//        // Equals and HashCode
+//        @Override
+//        public boolean equals(Object o) {
+//            if (this == o) return true;
+//            if (o == null || getClass() != o.getClass()) return false;
+//            CompositeKey that = (CompositeKey) o;
+//            return Objects.equals(customerId, that.customerId) &&
+//                    Objects.equals(basketId, that.basketId) &&
+//                    Objects.equals(itemId, that.itemId);
+//        }
+//
+//        @Override
+//        public int hashCode() {
+//            return Objects.hash(customerId, basketId, itemId);
+//        }
+//    }
+
+    public static class CustomerKey implements Serializable {
         private String customerId;
-        private String basketId;
-        private String itemId;
 
-        // Constructors
-        public CompositeKey() {}
+        public CustomerKey() {}
 
-        public CompositeKey(String customerId, String basketId, String itemId) {
+        public CustomerKey(String customerId) {
             this.customerId = customerId;
-            this.basketId = basketId;
-            this.itemId = itemId;
         }
 
-        // Equals and HashCode
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
-            CompositeKey that = (CompositeKey) o;
-            return Objects.equals(customerId, that.customerId) &&
-                    Objects.equals(basketId, that.basketId) &&
-                    Objects.equals(itemId, that.itemId);
+            CustomerKey that = (CustomerKey) o;
+            return Objects.equals(customerId, that.customerId);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(customerId, basketId, itemId);
+            return Objects.hash(customerId);
         }
     }
+
 }

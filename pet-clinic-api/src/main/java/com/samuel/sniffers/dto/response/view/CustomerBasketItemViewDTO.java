@@ -1,5 +1,6 @@
 package com.samuel.sniffers.dto.response.view;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,14 +22,17 @@ public class CustomerBasketItemViewDTO {
     @JsonIgnore // Ignore returning ownerToken in response
     private String ownerToken;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime customerCreated;
 
     private String basketId;
 
     private String basketStatus;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime basketCreated;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime basketStatusDate;
 
     private String itemId;
@@ -37,5 +41,6 @@ public class CustomerBasketItemViewDTO {
 
     private Integer itemAmount;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime itemCreated;
 }
