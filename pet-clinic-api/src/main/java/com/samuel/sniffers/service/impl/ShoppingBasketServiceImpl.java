@@ -212,6 +212,20 @@ public class ShoppingBasketServiceImpl extends AbstractPaginationService impleme
         logger.info("deleted basket with id {}.", basketId);
     }
 
+    @Override
+    public ShoppingBasket getDbBasket(String customerId, String basketId) {
+        return getCustomerBasket(customerId, basketId);
+    }
+
+    @Override
+    public boolean basketExist(String customerId, String basketId) {
+        return basketRepository.existByIdAndOwnerToken(
+                customerId,
+                basketId,
+                securityService.getCurrentCustomerToken(),
+                securityService.isAdmin(securityService.getCurrentCustomerToken()));
+    }
+
     private void updateBasketStatus(ShoppingBasket shoppingBasket, BasketStatus newBasketStatus) {
 
         final Map<BasketStatus, Set<BasketStatus>> allowedStatusTransitionMap = Map.of(

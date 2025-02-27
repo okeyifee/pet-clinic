@@ -28,6 +28,22 @@ public interface ShoppingBasketRepository extends JpaRepository<ShoppingBasket, 
     );
 
     @Query("""
+        SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END
+        FROM Customer c
+        LEFT JOIN c.baskets b
+        LEFT JOIN b.items i
+        WHERE c.id = :customerId
+        AND b.id = :basketId
+        AND (c.ownerToken = :token OR :isAdmin = true)
+    """)
+    boolean existByIdAndOwnerToken(
+            @Param("customerId") String customerId,
+            @Param("basketId") String basketId,
+            @Param("token") String token,
+            @Param("isAdmin") boolean isAdmin
+    );
+
+    @Query("""
         SELECT b FROM ShoppingBasket b
         JOIN b.customer c
         WHERE c.id = :customerId
