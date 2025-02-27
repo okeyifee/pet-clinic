@@ -53,6 +53,14 @@ public abstract class AbstractPaginationService {
         };
     }
 
+    protected String getSanitizedViewSortBy(String sortBy) {
+        return switch (sortBy.toLowerCase()) {
+            case SORT_BY_ID -> SORT_BY_ID;
+            case SORT_BY_NAME -> SORT_BY_NAME;
+            default -> SORT_BY_ID; // default sorted by id
+        };
+    }
+
     protected Sort.Direction getSanitizedSortDirection(String direction) {
 
         String sortDirection;
