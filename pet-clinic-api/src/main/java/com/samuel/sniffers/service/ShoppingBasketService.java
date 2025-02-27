@@ -5,6 +5,7 @@ import com.samuel.sniffers.dto.BatchBasketUpdateDTO;
 import com.samuel.sniffers.dto.UpdateBasketDTO;
 import com.samuel.sniffers.dto.response.BasketBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.BasketResponseDTO;
+import com.samuel.sniffers.entity.ShoppingBasket;
 
 import java.io.OutputStream;
 
@@ -23,4 +24,8 @@ public interface ShoppingBasketService {
     BasketBatchUpdateResponseDTO batchUpdateBasket(String customerId, BatchBasketUpdateDTO dto);
 
     void deleteBasket(String customerId, String basketId);
+
+    ShoppingBasket getDbBasket(String customerId, String basketId);
+
+    boolean basketExist(String customerId, String basketId);
 }

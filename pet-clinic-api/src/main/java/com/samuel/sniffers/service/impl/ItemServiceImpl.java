@@ -15,13 +15,13 @@ import com.samuel.sniffers.dto.UpdateItemDTO;
 import com.samuel.sniffers.dto.response.BatchUpdateFailure;
 import com.samuel.sniffers.dto.response.ItemBatchUpdateResponseDTO;
 import com.samuel.sniffers.dto.response.ItemResponseDTO;
-import com.samuel.sniffers.entity.Customer;
 import com.samuel.sniffers.entity.Item;
 import com.samuel.sniffers.entity.ShoppingBasket;
 import com.samuel.sniffers.repository.ItemRepository;
 import com.samuel.sniffers.security.SecurityService;
 import com.samuel.sniffers.service.CustomerService;
 import com.samuel.sniffers.service.ItemService;
+import com.samuel.sniffers.service.ShoppingBasketService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -44,12 +44,14 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
     private final Logger logger;
     private final ItemRepository itemRepository;
     private final CustomerService customerService;
+    private final ShoppingBasketService basketService;
     private final SecurityService securityService;
     private final EntityFactory entityFactory;
 
-    public ItemServiceImpl(ItemRepository itemRepository, CustomerService customerService, SecurityService securityService, EntityFactory entityFactory) {
+    public ItemServiceImpl(ItemRepository itemRepository, CustomerService customerService, ShoppingBasketService basketService, SecurityService securityService, EntityFactory entityFactory) {
         this.itemRepository = itemRepository;
         this.customerService = customerService;
+        this.basketService = basketService;
         this.securityService = securityService;
         this.entityFactory = entityFactory;
         this.logger = LoggerFactory.getLogger(this.getClass());
@@ -58,13 +60,9 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemResponseDTO createItem(String customerId, String basketId, ItemDTO dto) {
-        Customer customer = customerService.getCustomer(customerId);
+        validateCustomerExists(customerId);
 
-        ShoppingBasket userBasket = customer.getBaskets()
-                .stream()
-                .filter(basket -> basket.getId().equalsIgnoreCase(basketId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Basket not found"));
+        ShoppingBasket userBasket = basketService.getDbBasket(customerId, basketId);
 
         Item item = entityFactory.convertToEntity(dto, Item.class);
         item.setBasket(userBasket);
@@ -75,6 +73,7 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemResponseDTO getItem(String customerId, String basketId, String itemId) {
         validateCustomerExists(customerId);
+        validateBasketExists(customerId, basketId);
 
         return entityFactory.convertToDTO(getDatabaseItem( customerId, basketId, itemId), ItemResponseDTO.class);
     }
@@ -85,6 +84,7 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
             int page, int size, String sortBy, String direction, String baseUrl) {
 
         validateCustomerExists(customerId);
+        validateBasketExists(customerId, basketId);
 
         // Sanitize and Create page request -> Avoid attacks on db via query params
         PageRequest pageRequest = PageRequest.of(
@@ -123,6 +123,9 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void streamAllToResponse(OutputStream outputStream, String customerId, String basketId) {
+        validateCustomerExists(customerId);
+        validateBasketExists(customerId, basketId);
+
         String token = securityService.getCurrentCustomerToken();
         boolean isAdmin = securityService.isAdmin(token);
 
@@ -151,6 +154,8 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemResponseDTO updateItem(String customerId, String basketId, String itemId, ItemDTO dto) {
         validateCustomerExists(customerId);
+        validateBasketExists(customerId, basketId);
+
         Item item = getDatabaseItem(customerId, basketId, itemId);
 
         item.setAmount(dto.getAmount());
@@ -168,6 +173,8 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
         }
 
         validateCustomerExists(customerId);
+        validateBasketExists(customerId, basketId);
+
         Item item = getDatabaseItem(customerId, basketId, itemId);
         item = entityFactory.patchEntity(dto, item);
         return entityFactory.convertToDTO(itemRepository.save(item), ItemResponseDTO.class);
@@ -177,6 +184,7 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public ItemBatchUpdateResponseDTO batchUpdateItems(String customerId, String basketId, BatchItemUpdateDTO dto) {
         validateCustomerExists(customerId);
+        validateBasketExists(customerId, basketId);
 
         final List<String> itemIds = dto.getUpdates().stream()
                 .map(BatchItemUpdateDTO.ItemPatchDTO::getItemId)
@@ -225,6 +233,8 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void deleteItem(String customerId, String basketId, String itemId) {
         validateCustomerExists(customerId);
+        validateBasketExists(customerId, basketId);
+
         Item item = getDatabaseItem(customerId, basketId, itemId);
 
         itemRepository.delete(item);
@@ -235,6 +245,13 @@ public class ItemServiceImpl extends AbstractPaginationService implements ItemSe
         if (!customerService.customerExist(customerId)) {
             logger.error("Customer with id: {} not found", customerId);
             throw new ResourceNotFoundException("Customer not found");
+        }
+    }
+
+    private void validateBasketExists(String customerId, String basketId) {
+        if (!basketService.basketExist(customerId, basketId)) {
+            logger.error("Basket with id: {} not found", basketId);
+            throw new ResourceNotFoundException("Basket not found");
         }
     }
 
