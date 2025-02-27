@@ -30,3 +30,25 @@ CREATE TABLE items (
     FOREIGN KEY (basket_id) REFERENCES shopping_baskets(id) ON DELETE CASCADE,
     CHECK (amount >= 1)
 );
+
+CREATE OR REPLACE VIEW customer_basket_item_overview AS
+SELECT
+    c.id AS customer_id,
+    c.name AS customer_name,
+    c.timezone AS customer_timezone,
+    c.owner_token AS owner_token,
+    c.created AS customer_created,
+    b.id AS basket_id,
+    b.status AS basket_status,
+    b.created AS basket_created,
+    b.status_date AS basket_status_date,
+    i.id AS item_id,
+    i.description AS item_description,
+    i.amount AS item_amount,
+    i.created AS item_created
+FROM
+    customers c
+LEFT JOIN
+    shopping_baskets b ON c.id = b.customer_id
+LEFT JOIN
+    items i ON b.id = i.basket_id;
